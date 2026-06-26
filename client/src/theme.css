@@ -1,0 +1,1897 @@
+:root {
+  --estrogen-brand: #bf3264;
+  --estrogen-brand-hover: #d23f73;
+  --estrogen-brand-active: #a82a55;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Inter", sans-serif;
+
+  --em-1: 4px;
+  --em-2: 8px;
+  --em-3: 12px;
+  --em-4: 16px;
+  --em-5: 20px;
+  --em-6: 24px;
+  --em-7: 32px;
+  --em-8: 40px;
+
+  --em-radius-sm: 6px;
+  --em-radius: 10px;
+  --em-radius-lg: 14px;
+
+  --em-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --em-fast: 120ms var(--em-ease);
+  --em-med: 200ms var(--em-ease);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--color-kumo-canvas);
+  color: var(--text-color-kumo-default);
+  font-family: var(--font-sans);
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+.em-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+html[data-mode="dark"] {
+  --color-kumo-canvas: #1d171f;
+  --color-kumo-elevated: #231c26;
+  --color-kumo-recessed: #19141b;
+  --color-kumo-base: #271f2a;
+  --color-kumo-tint: #2e2533;
+  --color-kumo-overlay: #2e2533;
+  --color-kumo-control: #18131a;
+  --color-kumo-interact: rgba(250, 236, 242, 0.2);
+  --color-kumo-fill: #2e2533;
+  --color-kumo-fill-hover: #372b3d;
+  --color-kumo-line: rgba(250, 236, 242, 0.12);
+  --color-kumo-hairline: rgba(250, 236, 242, 0.07);
+  --color-kumo-contrast: #faecf2;
+
+  --color-kumo-brand: #bf3264;
+  --color-kumo-brand-hover: #d23f73;
+  --kumo-button-emphasis-bg: #bf3264;
+  --kumo-button-emphasis-ring: rgba(191, 50, 100, 0.4);
+
+  --text-color-kumo-default: #faecf2;
+  --text-color-kumo-strong: #fff6fa;
+  --text-color-kumo-subtle: rgba(250, 236, 242, 0.56);
+  --text-color-kumo-inactive: rgba(250, 236, 242, 0.3);
+  --text-color-kumo-placeholder: rgba(250, 236, 242, 0.36);
+  --text-color-kumo-brand: #e0789f;
+  --text-color-kumo-link: #86b4f2;
+
+  --em-row-active: rgba(191, 50, 100, 0.16);
+  --em-row-active-bar: #d23f73;
+  --em-brand-soft: rgba(191, 50, 100, 0.14);
+  --em-brand-soft-border: rgba(224, 120, 159, 0.28);
+  --em-star: #f0c259;
+  --em-shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(250, 236, 242, 0.04) inset;
+}
+
+html[data-mode="light"] {
+  --color-kumo-canvas: #fbf3f7;
+  --color-kumo-elevated: #ffffff;
+  --color-kumo-recessed: #f5ebf0;
+  --color-kumo-base: #ffffff;
+  --color-kumo-tint: #f6eaf1;
+  --color-kumo-control: #ffffff;
+  --color-kumo-interact: rgba(40, 15, 28, 0.18);
+  --color-kumo-fill: #f1dde8;
+  --color-kumo-fill-hover: #ead0de;
+  --color-kumo-line: rgba(40, 15, 28, 0.12);
+  --color-kumo-hairline: rgba(40, 15, 28, 0.07);
+
+  --color-kumo-brand: #bf3264;
+  --color-kumo-brand-hover: #a82a55;
+  --kumo-button-emphasis-bg: #bf3264;
+  --kumo-button-emphasis-ring: rgba(191, 50, 100, 0.35);
+
+  --text-color-kumo-default: #2a1822;
+  --text-color-kumo-strong: #1c0f16;
+  --text-color-kumo-subtle: #6e5662;
+  --text-color-kumo-inactive: #b79caa;
+  --text-color-kumo-placeholder: #a98a98;
+  --text-color-kumo-brand: #bf3264;
+
+  --em-row-active: rgba(191, 50, 100, 0.1);
+  --em-row-active-bar: #bf3264;
+  --em-brand-soft: rgba(191, 50, 100, 0.08);
+  --em-brand-soft-border: rgba(191, 50, 100, 0.28);
+  --em-star: #e0a020;
+  --em-shadow-pop: 0 14px 44px rgba(40, 15, 28, 0.16);
+}
+
+html[data-theme="gold"] {
+  --color-kumo-canvas: #1e1a14;
+  --color-kumo-elevated: #251f16;
+  --color-kumo-recessed: #16130e;
+  --color-kumo-base: #2a2318;
+  --color-kumo-tint: #332b1a;
+  --color-kumo-overlay: #332b1a;
+  --color-kumo-control: #16130e;
+  --color-kumo-interact: rgba(232, 223, 200, 0.18);
+  --color-kumo-fill: #332b1a;
+  --color-kumo-fill-hover: #3d3420;
+  --color-kumo-line: rgba(232, 223, 200, 0.14);
+  --color-kumo-hairline: rgba(232, 223, 200, 0.07);
+  --color-kumo-contrast: #e8dfc8;
+
+  --color-kumo-brand: #c4a030;
+  --color-kumo-brand-hover: #d4aa34;
+  --kumo-button-emphasis-bg: #b58a22;
+  --kumo-button-emphasis-ring: rgba(212, 170, 52, 0.4);
+
+  --text-color-kumo-default: #e8dfc8;
+  --text-color-kumo-strong: #f5efe0;
+  --text-color-kumo-subtle: #a89880;
+  --text-color-kumo-inactive: rgba(168, 152, 128, 0.45);
+  --text-color-kumo-placeholder: rgba(168, 152, 128, 0.6);
+  --text-color-kumo-brand: #d4aa34;
+  --text-color-kumo-link: #6b96c8;
+
+  --em-row-active: rgba(196, 160, 48, 0.16);
+  --em-row-active-bar: #c4a030;
+  --em-brand-soft: rgba(196, 160, 48, 0.14);
+  --em-brand-soft-border: rgba(212, 170, 52, 0.28);
+  --em-star: #d4aa34;
+  --em-shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme="midnight"] {
+  --color-kumo-canvas: #12141f;
+  --color-kumo-elevated: #181b29;
+  --color-kumo-recessed: #0e1018;
+  --color-kumo-base: #1c2031;
+  --color-kumo-tint: #232841;
+  --color-kumo-overlay: #232841;
+  --color-kumo-control: #0e1018;
+  --color-kumo-interact: rgba(214, 222, 250, 0.18);
+  --color-kumo-fill: #232841;
+  --color-kumo-fill-hover: #2b3150;
+  --color-kumo-line: rgba(214, 222, 250, 0.13);
+  --color-kumo-hairline: rgba(214, 222, 250, 0.06);
+  --color-kumo-contrast: #e6e9f5;
+
+  --color-kumo-brand: #6b8cff;
+  --color-kumo-brand-hover: #84a0ff;
+  --kumo-button-emphasis-bg: #5a78f0;
+  --kumo-button-emphasis-ring: rgba(107, 140, 255, 0.4);
+
+  --text-color-kumo-default: #e6e9f5;
+  --text-color-kumo-strong: #f4f6ff;
+  --text-color-kumo-subtle: #9aa3c4;
+  --text-color-kumo-inactive: rgba(154, 163, 196, 0.45);
+  --text-color-kumo-placeholder: rgba(154, 163, 196, 0.6);
+  --text-color-kumo-brand: #93a8ff;
+  --text-color-kumo-link: #93a8ff;
+
+  --em-row-active: rgba(107, 140, 255, 0.18);
+  --em-row-active-bar: #6b8cff;
+  --em-brand-soft: rgba(107, 140, 255, 0.15);
+  --em-brand-soft-border: rgba(147, 168, 255, 0.3);
+  --em-star: #f0c259;
+  --em-shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+
+html[data-theme="sakura"] {
+  --color-kumo-canvas: #fbf1f3;
+  --color-kumo-elevated: #ffffff;
+  --color-kumo-recessed: #f6e7ea;
+  --color-kumo-base: #ffffff;
+  --color-kumo-tint: #fbe4ea;
+  --color-kumo-overlay: #fbe4ea;
+  --color-kumo-control: #ffffff;
+  --color-kumo-interact: rgba(58, 22, 38, 0.18);
+  --color-kumo-fill: #f7dce4;
+  --color-kumo-fill-hover: #f1ccd8;
+  --color-kumo-line: rgba(58, 22, 38, 0.12);
+  --color-kumo-hairline: rgba(58, 22, 38, 0.07);
+  --color-kumo-contrast: #2a1822;
+
+  --color-kumo-brand: #d05a86;
+  --color-kumo-brand-hover: #c14d78;
+  --kumo-button-emphasis-bg: #d05a86;
+  --kumo-button-emphasis-ring: rgba(208, 90, 134, 0.35);
+
+  --text-color-kumo-default: #2a1822;
+  --text-color-kumo-strong: #1c0f16;
+  --text-color-kumo-subtle: #7a5c68;
+  --text-color-kumo-inactive: #c0a0ad;
+  --text-color-kumo-placeholder: #b08e9c;
+  --text-color-kumo-brand: #c14d78;
+  --text-color-kumo-link: #5a86e6;
+
+  --em-row-active: rgba(208, 90, 134, 0.12);
+  --em-row-active-bar: #d05a86;
+  --em-brand-soft: rgba(208, 90, 134, 0.1);
+  --em-brand-soft-border: rgba(208, 90, 134, 0.28);
+  --em-star: #e0a020;
+  --em-shadow-pop: 0 14px 44px rgba(58, 22, 38, 0.16);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.em-app {
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+
+.em-wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.02rem;
+  letter-spacing: -0.025em;
+  color: var(--text-color-kumo-strong);
+  display: flex;
+  align-items: center;
+  gap: var(--em-2);
+}
+
+.em-wordmark-glyph {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: var(--color-kumo-brand);
+  color: #fff6fa;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex: none;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset;
+}
+
+.em-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-kumo-recessed);
+  padding: 0 var(--em-6);
+}
+
+.em-column {
+  flex: 1;
+  width: 100%;
+  max-width: 760px;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.em-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  animation: em-pane-in var(--em-med);
+}
+
+@keyframes em-pane-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.em-pane-reader {
+  animation-name: em-pane-in-reader;
+}
+
+@keyframes em-pane-in-reader {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.em-pane-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--em-3);
+  padding: var(--em-2) 0;
+  min-height: 64px;
+  flex: none;
+}
+
+.em-pane-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.em-pane-title-text {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.18rem;
+  letter-spacing: -0.02em;
+  color: var(--text-color-kumo-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.em-pane-title-count {
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--text-color-kumo-brand);
+  margin-top: 1px;
+}
+
+.em-pane-search {
+  flex: none;
+  width: 248px;
+}
+
+.em-reader-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--em-1);
+  flex-wrap: wrap;
+  min-height: 64px;
+  padding: var(--em-2) 0;
+  flex: none;
+}
+
+.em-read-pane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-kumo-recessed);
+}
+
+.em-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--em-2);
+  padding: 0 var(--em-3);
+  border-bottom: 1px solid var(--color-kumo-line);
+  height: 56px;
+  flex: none;
+  background: var(--color-kumo-canvas);
+}
+
+.em-topbar-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
+  color: var(--text-color-kumo-strong);
+}
+
+.em-listhead {
+  display: flex;
+  align-items: center;
+  gap: var(--em-2);
+  height: 38px;
+  padding: 0 var(--em-3);
+  border-bottom: 1px solid var(--color-kumo-hairline);
+  flex: none;
+}
+
+.em-listhead-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.01em;
+  color: var(--text-color-kumo-strong);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.em-listhead-count {
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: var(--text-color-kumo-subtle);
+  letter-spacing: 0;
+  margin-left: var(--em-2);
+}
+
+.em-listhead-check {
+  opacity: 0;
+  transition: opacity var(--em-fast);
+}
+
+.em-listhead:hover .em-listhead-check,
+.em-listhead-check.is-shown {
+  opacity: 1;
+}
+
+.em-bulkbar {
+  display: flex;
+  align-items: center;
+  gap: var(--em-1);
+  height: 38px;
+  padding: 0 var(--em-2) 0 var(--em-3);
+  border: 1px solid var(--em-brand-soft-border);
+  border-radius: var(--em-radius);
+  background: var(--em-brand-soft);
+  animation: em-slidein var(--em-med);
+}
+
+@keyframes em-slidein {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.em-bulkbar-count {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-color-kumo-strong);
+  margin-right: var(--em-2);
+  white-space: nowrap;
+}
+
+.em-bulkbar-spacer {
+  flex: 1;
+}
+
+.em-list-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-bottom: var(--em-7);
+}
+
+.em-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--em-3);
+  padding: 11px var(--em-3);
+  border-bottom: 1px solid var(--color-kumo-hairline);
+  cursor: pointer;
+  transition: background var(--em-fast);
+}
+
+.em-row:first-child {
+  border-top: 1px solid var(--color-kumo-hairline);
+}
+
+.em-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: transparent;
+  transition: background var(--em-fast);
+}
+
+.em-row:hover {
+  background: var(--color-kumo-fill-hover);
+}
+
+.em-row.is-active {
+  background: var(--em-row-active);
+}
+
+.em-row.is-active::before {
+  background: var(--em-row-active-bar);
+}
+
+.em-row.is-selected {
+  background: var(--em-brand-soft);
+}
+
+.em-row.is-unread .em-row-sender {
+  font-weight: 700;
+  color: var(--text-color-kumo-strong);
+}
+
+.em-row.is-unread .em-row-subject {
+  font-weight: 600;
+  color: var(--text-color-kumo-strong);
+}
+
+.em-row-lead {
+  flex: none;
+  width: 18px;
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+}
+
+.em-row-check {
+  display: none;
+}
+
+.em-row:hover .em-row-check,
+.em-row.is-selected .em-row-check {
+  display: block;
+}
+
+.em-row:hover .em-unread-dot,
+.em-row.is-selected .em-unread-dot {
+  display: none;
+}
+
+.em-unread-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-kumo-brand);
+  flex: none;
+}
+
+.em-unread-dot.is-placeholder {
+  background: transparent;
+}
+
+.em-row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.em-row-line {
+  display: flex;
+  align-items: center;
+  gap: var(--em-2);
+}
+
+.em-row-sender {
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--text-color-kumo-default);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.em-row-date {
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-color-kumo-subtle);
+  white-space: nowrap;
+  flex: none;
+}
+
+.em-row.is-unread .em-row-date {
+  color: var(--text-color-kumo-brand);
+  font-weight: 600;
+}
+
+.em-row-subject {
+  font-size: 0.84rem;
+  color: var(--text-color-kumo-default);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: none;
+  max-width: 58%;
+}
+
+.em-row-snippet {
+  font-size: 0.84rem;
+  color: var(--text-color-kumo-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.em-row-snippet::before {
+  content: "\2013";
+  margin: 0 6px 0 0;
+  color: var(--text-color-kumo-inactive);
+}
+
+.em-row-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--em-1);
+  flex: none;
+  color: var(--text-color-kumo-inactive);
+}
+
+.em-row-labels {
+  display: flex;
+  gap: var(--em-1);
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.em-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 17px;
+  padding: 0 7px;
+  border-radius: 5px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  background: color-mix(in srgb, var(--em-chip-color, var(--color-kumo-brand)) 16%, transparent);
+  color: var(--em-chip-color, var(--color-kumo-brand));
+  white-space: nowrap;
+}
+
+.em-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--em-chip-color, var(--color-kumo-brand));
+  flex: none;
+}
+
+.em-star-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-color-kumo-inactive);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: var(--em-radius-sm);
+  opacity: 0;
+  transition: color var(--em-fast), opacity var(--em-fast), background var(--em-fast);
+}
+
+.em-row:hover .em-star-btn,
+.em-star-btn.is-on {
+  opacity: 1;
+}
+
+.em-star-btn:hover {
+  color: var(--em-star);
+  background: var(--color-kumo-fill);
+}
+
+.em-star-btn.is-on {
+  color: var(--em-star);
+}
+
+.em-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--em-3);
+  height: 100%;
+  width: 100%;
+  padding: var(--em-8);
+  text-align: center;
+  color: var(--text-color-kumo-subtle);
+}
+
+.em-empty-icon {
+  color: var(--text-color-kumo-inactive);
+  opacity: 0.7;
+}
+
+.em-empty-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+  color: var(--text-color-kumo-default);
+}
+
+.em-empty-sub {
+  font-size: 0.82rem;
+  color: var(--text-color-kumo-subtle);
+  max-width: 30ch;
+  line-height: 1.5;
+  margin-top: -6px;
+}
+
+.em-thread {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: var(--em-5) 0 72px;
+}
+
+.em-thread-inner {
+  width: 100%;
+  margin: 0 auto;
+}
+
+.em-thread-subject {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.4rem;
+  line-height: 1.2;
+  letter-spacing: -0.022em;
+  margin: 0 0 var(--em-5);
+  color: var(--text-color-kumo-strong);
+}
+
+.em-msg {
+  border: 1px solid var(--color-kumo-line);
+  border-radius: var(--em-radius-lg);
+  margin-bottom: var(--em-3);
+  background: var(--color-kumo-elevated);
+  overflow: hidden;
+  transition: border-color var(--em-fast);
+}
+
+.em-msg.is-collapsed {
+  cursor: pointer;
+}
+
+.em-msg.is-collapsed:hover {
+  border-color: var(--color-kumo-interact);
+}
+
+.em-msg-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--em-3);
+  padding: var(--em-4) var(--em-5);
+}
+
+.em-msg.is-collapsed .em-msg-head {
+  padding: var(--em-3) var(--em-5);
+  align-items: center;
+}
+
+.em-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: #fff6fa;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.16) inset;
+}
+
+.em-msg.is-collapsed .em-avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 0.72rem;
+  border-radius: 7px;
+}
+
+.em-msg-head-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.em-msg-from {
+  font-weight: 600;
+  color: var(--text-color-kumo-strong);
+  font-size: 0.92rem;
+  letter-spacing: -0.005em;
+}
+
+.em-msg-from-addr {
+  font-weight: 400;
+  color: var(--text-color-kumo-subtle);
+  font-size: 0.84rem;
+}
+
+.em-msg-to {
+  font-size: 0.78rem;
+  color: var(--text-color-kumo-subtle);
+  margin-top: 3px;
+}
+
+.em-msg-date {
+  font-size: 0.78rem;
+  color: var(--text-color-kumo-subtle);
+  white-space: nowrap;
+  flex: none;
+  padding-top: 2px;
+  cursor: default;
+}
+
+.em-msg-collapsed-snip {
+  font-size: 0.84rem;
+  color: var(--text-color-kumo-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.em-msg-body {
+  padding: 0 var(--em-5) var(--em-5);
+}
+
+.em-text-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-color-kumo-default);
+}
+
+.em-text-body a {
+  color: var(--text-color-kumo-link);
+}
+
+.em-iframe {
+  width: 100%;
+  border: none;
+  background: #fff;
+  border-radius: var(--em-radius);
+}
+
+.em-images-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--em-2);
+  padding: 9px var(--em-3);
+  background: var(--color-kumo-tint);
+  border: 1px solid var(--color-kumo-line);
+  border-radius: var(--em-radius);
+  margin-bottom: var(--em-3);
+  font-size: 0.82rem;
+  color: var(--text-color-kumo-subtle);
+}
+
+.em-att-row {
+  display: flex;
+  gap: var(--em-2);
+  flex-wrap: wrap;
+  margin-top: var(--em-4);
+  padding-top: var(--em-4);
+  border-top: 1px solid var(--color-kumo-hairline);
+}
+
+.em-att-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--em-2);
+  padding: 7px 11px;
+  border: 1px solid var(--color-kumo-line);
+  border-radius: var(--em-radius);
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--text-color-kumo-default);
+  background: var(--color-kumo-base);
+  transition: background var(--em-fast), border-color var(--em-fast);
+}
+
+.em-att-chip:hover {
+  background: var(--color-kumo-fill-hover);
+  border-color: var(--color-kumo-interact);
+}
+
+.em-att-size {
+  color: var(--text-color-kumo-subtle);
+}
+
+.em-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+}
+
+.em-auth {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  padding: var(--em-6);
+}
+
+.em-auth-split {
+  display: flex;
+  width: min(940px, 100%);
+  height: min(560px, calc(100vh - 48px));
+  background: var(--color-kumo-base);
+  border: 1px solid var(--color-kumo-line);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.em-auth-pane {
+  flex: 1 1 46%;
+  min-width: 0;
+  padding: 48px 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.em-auth-mark {
+  font-weight: 700;
+  font-size: 0.92rem;
+  letter-spacing: -0.01em;
+  color: var(--text-color-kumo-subtle);
+  margin-bottom: 26px;
+}
+
+.em-auth-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.85rem;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  margin: 0 0 12px;
+  color: var(--text-color-kumo-strong);
+}
+
+.em-auth-copy {
+  color: var(--text-color-kumo-subtle);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  margin: 0 0 22px;
+  max-width: 34ch;
+}
+
+.em-auth-pane .kumo-button,
+.em-auth-pane button {
+  width: 100%;
+}
+
+.em-auth-foot {
+  color: var(--text-color-kumo-placeholder);
+  font-size: 0.76rem;
+  margin: 14px 0 0;
+}
+
+.em-auth-art {
+  flex: 1 1 54%;
+  min-width: 0;
+  background-image:
+    linear-gradient(155deg, rgba(191, 50, 100, 0.22) 0%, rgba(29, 23, 31, 0.5) 100%),
+    url(/auth-splash.jpg);
+  background-size: cover;
+  background-position: 50% 28%;
+  border-left: 1px solid var(--color-kumo-line);
+}
+
+@media (max-width: 760px) {
+  .em-auth-split {
+    width: min(420px, 100%);
+    height: auto;
+  }
+  .em-auth-art {
+    display: none;
+  }
+  .em-auth-pane {
+    padding: 36px 30px;
+  }
+}
+
+.em-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.em-form-error {
+  color: var(--color-kumo-danger, #e5484d);
+  font-size: 0.83rem;
+}
+
+.em-addr-preview {
+  font-size: 0.8rem;
+  color: var(--text-color-kumo-subtle);
+}
+
+.em-addr-preview b {
+  color: var(--text-color-kumo-brand);
+}
+
+.em-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--em-7) var(--em-6) 72px;
+  width: 100%;
+}
+
+.em-section-inner {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.em-section h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-color-kumo-strong);
+  font-size: 1.45rem;
+  margin: 0 0 var(--em-2);
+}
+
+.em-section-lede {
+  color: var(--text-color-kumo-subtle);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin: 0 0 var(--em-7);
+  max-width: 56ch;
+}
+
+.em-card {
+  border: 1px solid var(--color-kumo-line);
+  border-radius: var(--em-radius-lg);
+  background: var(--color-kumo-elevated);
+  padding: var(--em-5) var(--em-6);
+  margin-bottom: var(--em-5);
+}
+
+.em-card-head {
+  margin-bottom: var(--em-4);
+}
+
+.em-card-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+  color: var(--text-color-kumo-strong);
+  margin: 0;
+}
+
+.em-card-sub {
+  font-size: 0.8rem;
+  color: var(--text-color-kumo-subtle);
+  line-height: 1.5;
+  margin: 4px 0 0;
+}
+
+.em-field-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--em-5);
+}
+
+.em-field-label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 500;
+  margin-bottom: var(--em-2);
+  color: var(--text-color-kumo-default);
+}
+
+.em-toggle-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--em-4);
+  padding: var(--em-3) 0;
+  border-top: 1px solid var(--color-kumo-hairline);
+}
+
+.em-toggle-row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.em-toggle-copy {
+  min-width: 0;
+}
+
+.em-toggle-title {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-color-kumo-default);
+}
+
+.em-toggle-sub {
+  font-size: 0.78rem;
+  color: var(--text-color-kumo-subtle);
+  line-height: 1.45;
+  margin-top: 2px;
+}
+
+.em-alias-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.em-alias-row {
+  display: flex;
+  align-items: center;
+  gap: var(--em-3);
+  padding: var(--em-3) 0;
+  border-top: 1px solid var(--color-kumo-hairline);
+}
+
+.em-alias-row:first-child {
+  border-top: none;
+}
+
+.em-alias-addr {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.86rem;
+  color: var(--text-color-kumo-default);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.em-alias-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--em-1);
+  flex: none;
+}
+
+.em-alias-add {
+  display: flex;
+  align-items: stretch;
+  gap: var(--em-2);
+  margin-top: var(--em-4);
+  padding-top: var(--em-4);
+  border-top: 1px solid var(--color-kumo-hairline);
+}
+
+.em-alias-input {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: var(--color-kumo-control);
+  border: 1px solid var(--color-kumo-line);
+  border-radius: var(--em-radius);
+  overflow: hidden;
+  transition: border-color var(--em-fast);
+}
+
+.em-alias-input:focus-within {
+  border-color: var(--color-kumo-brand);
+}
+
+.em-alias-input input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-color-kumo-default);
+  font-family: var(--font-sans);
+  font-size: 0.86rem;
+  padding: 9px var(--em-3);
+}
+
+.em-alias-suffix {
+  font-size: 0.84rem;
+  color: var(--text-color-kumo-subtle);
+  padding: 0 var(--em-3);
+  white-space: nowrap;
+  border-left: 1px solid var(--color-kumo-hairline);
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+
+.em-compose-fields {
+  display: flex;
+  flex-direction: column;
+}
+
+.em-recip-row {
+  display: flex;
+  align-items: center;
+  gap: var(--em-3);
+  position: relative;
+  border-bottom: 1px solid var(--color-kumo-hairline);
+}
+
+.em-recip-row > label {
+  width: 46px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-color-kumo-subtle);
+  flex: none;
+}
+
+.em-recip-input {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+.em-recip-input .kumo-input,
+.em-recip-input input {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.em-recip-extra {
+  display: flex;
+  gap: var(--em-3);
+  margin-left: 58px;
+  padding: var(--em-2) 0;
+}
+
+.em-linkbtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-color-kumo-subtle);
+  transition: color var(--em-fast);
+}
+
+.em-linkbtn:hover {
+  color: var(--text-color-kumo-brand);
+}
+
+.em-suggest {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: var(--color-kumo-elevated);
+  border: 1px solid var(--color-kumo-line);
+  border-radius: var(--em-radius);
+  margin-top: var(--em-1);
+  overflow: hidden;
+  padding: var(--em-1);
+  box-shadow: var(--em-shadow-pop);
+}
+
+.em-suggest-item {
+  padding: 7px var(--em-2);
+  border-radius: var(--em-radius-sm);
+  cursor: pointer;
+  font-size: 0.84rem;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  transition: background var(--em-fast);
+}
+
+.em-suggest-item:hover {
+  background: var(--color-kumo-fill-hover);
+}
+
+.em-suggest-addr {
+  color: var(--text-color-kumo-subtle);
+  font-size: 0.8rem;
+}
+
+.em-compose-subject {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-bottom: 1px solid var(--color-kumo-hairline) !important;
+  border-radius: 0 !important;
+  padding: var(--em-3) 0 !important;
+  font-weight: 600 !important;
+  font-size: 0.92rem !important;
+}
+
+.em-compose-body {
+  width: 100%;
+  min-height: 240px;
+  resize: vertical;
+  background: transparent;
+  color: var(--text-color-kumo-default);
+  border: none;
+  outline: none;
+  padding: var(--em-4) 0 0;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.em-textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  background: var(--color-kumo-control);
+  color: var(--text-color-kumo-default);
+  border: 1px solid var(--color-kumo-line);
+  border-radius: var(--em-radius);
+  padding: var(--em-3);
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  transition: border-color var(--em-fast);
+}
+
+.em-textarea:focus {
+  outline: none;
+  border-color: var(--color-kumo-brand);
+}
+
+.em-pending-atts {
+  display: flex;
+  gap: var(--em-2);
+  flex-wrap: wrap;
+  margin-top: var(--em-3);
+}
+
+.em-pending-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border: 1px solid var(--color-kumo-line);
+  border-radius: var(--em-radius);
+  font-size: 0.78rem;
+  background: var(--color-kumo-base);
+}
+
+.em-pending-x {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-color-kumo-inactive);
+  padding: 0;
+  display: flex;
+  border-radius: 4px;
+  transition: color var(--em-fast);
+}
+
+.em-pending-x:hover {
+  color: var(--text-color-kumo-default);
+}
+
+.em-compose-from {
+  display: flex;
+  align-items: center;
+  gap: var(--em-3);
+  padding: var(--em-2) 0;
+  border-bottom: 1px solid var(--color-kumo-hairline);
+}
+
+.em-compose-from > label {
+  width: 46px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-color-kumo-subtle);
+  flex: none;
+}
+
+.em-compose-from-static {
+  font-size: 0.86rem;
+  color: var(--text-color-kumo-default);
+}
+
+.em-compose-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--em-2);
+  margin-top: var(--em-5);
+  padding-top: var(--em-4);
+  border-top: 1px solid var(--color-kumo-hairline);
+}
+
+.em-spacer {
+  flex: 1;
+}
+
+.em-label-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.em-label-group-item {
+  display: flex;
+  align-items: center;
+  gap: var(--em-2);
+  width: 100%;
+}
+
+.em-sidebar-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--em-3);
+  padding: var(--em-2) var(--em-2) 0;
+}
+
+.em-compose-btn {
+  width: 100%;
+  font-weight: 600 !important;
+  letter-spacing: -0.005em;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18), 0 1px 0 rgba(255, 255, 255, 0.14) inset;
+}
+
+.em-account-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--em-2);
+  padding: 7px var(--em-2);
+  width: 100%;
+  border: none;
+  background: transparent;
+  border-radius: var(--em-radius);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--em-fast);
+}
+
+.em-account-chip:hover {
+  background: var(--color-kumo-fill-hover);
+}
+
+.em-account-mono {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: #fff6fa;
+  text-transform: uppercase;
+  background: var(--color-kumo-brand);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.16) inset;
+}
+
+.em-account-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.em-account-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-color-kumo-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.em-account-addr {
+  font-size: 0.74rem;
+  color: var(--text-color-kumo-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.em-account-caret {
+  color: var(--text-color-kumo-inactive);
+  flex: none;
+}
+
+.em-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.em-table th,
+.em-table td {
+  text-align: left;
+  padding: 10px var(--em-3);
+  border-bottom: 1px solid var(--color-kumo-hairline);
+}
+
+.em-table th {
+  color: var(--text-color-kumo-subtle);
+  font-weight: 600;
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.em-table tbody tr {
+  transition: background var(--em-fast);
+}
+
+.em-table tbody tr:hover {
+  background: var(--color-kumo-fill-hover);
+}
+
+.em-code-cell {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.em-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: var(--em-3);
+}
+
+.em-theme-swatch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--em-2);
+  padding: var(--em-2);
+  border: 1px solid var(--color-kumo-line);
+  border-radius: var(--em-radius);
+  background: var(--color-kumo-base);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--em-fast), background var(--em-fast);
+}
+
+.em-theme-swatch:hover {
+  border-color: var(--color-kumo-interact);
+}
+
+.em-theme-swatch.is-active {
+  border-color: var(--em-brand-soft-border);
+  background: var(--em-brand-soft);
+}
+
+.em-theme-preview {
+  height: 44px;
+  border-radius: var(--em-radius-sm);
+  border: 1px solid var(--color-kumo-hairline);
+  display: flex;
+  align-items: flex-end;
+  padding: var(--em-2);
+  overflow: hidden;
+}
+
+.em-theme-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.14) inset;
+}
+
+.em-theme-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--em-2);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-color-kumo-default);
+  padding: 0 2px;
+}
+
+.em-keys-base {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  color: var(--text-color-kumo-default);
+  background: var(--color-kumo-control);
+  border: 1px solid var(--color-kumo-line);
+  border-radius: var(--em-radius-sm);
+  padding: 1px 6px;
+}
+
+.em-keys-new {
+  display: flex;
+  align-items: stretch;
+  gap: var(--em-2);
+  margin-bottom: var(--em-4);
+}
+
+.em-keys-new > div:first-child {
+  flex: 1;
+}
+
+.em-keys-reveal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--em-2);
+  padding: var(--em-3);
+  border: 1px solid var(--em-brand-soft-border);
+  border-radius: var(--em-radius);
+  background: var(--em-brand-soft);
+  margin-bottom: var(--em-4);
+}
+
+.em-keys-reveal-warn {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-color-kumo-brand);
+}
+
+.em-keys-empty {
+  font-size: 0.84rem;
+  color: var(--text-color-kumo-subtle);
+  padding: var(--em-2) 0;
+}
+
+.em-keys-revoke {
+  display: flex;
+  align-items: center;
+  gap: var(--em-2);
+}
+
+.em-keys-confirm {
+  font-size: 0.8rem;
+  color: var(--text-color-kumo-subtle);
+}
+
+.em-back-btn {
+  display: none;
+}
+
+.em-kbd-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--em-5);
+  animation: em-fade var(--em-fast);
+}
+
+@keyframes em-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.em-kbd-card {
+  background: var(--color-kumo-elevated);
+  border: 1px solid var(--color-kumo-line);
+  border-radius: var(--em-radius-lg);
+  padding: var(--em-6) var(--em-7);
+  max-width: 480px;
+  width: 100%;
+  box-shadow: var(--em-shadow-pop);
+  animation: em-pop var(--em-med);
+}
+
+@keyframes em-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.em-kbd-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-size: 1.15rem;
+  margin: 0 0 var(--em-4);
+  color: var(--text-color-kumo-strong);
+}
+
+.em-kbd-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  font-size: 0.86rem;
+  color: var(--text-color-kumo-default);
+  border-top: 1px solid var(--color-kumo-hairline);
+}
+
+.em-kbd-row:first-of-type {
+  border-top: none;
+}
+
+.em-kbd-keys {
+  display: flex;
+  gap: var(--em-1);
+  align-items: center;
+}
+
+.em-kbd-key {
+  font-family: ui-monospace, monospace;
+  background: var(--color-kumo-base);
+  border: 1px solid var(--color-kumo-line);
+  border-bottom-width: 2px;
+  border-radius: var(--em-radius-sm);
+  padding: 2px 7px;
+  font-size: 0.76rem;
+  min-width: 22px;
+  text-align: center;
+  color: var(--text-color-kumo-strong);
+}
+
+.em-skel {
+  padding: var(--em-3) var(--em-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--em-5);
+}
+
+.em-skel-row {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.em-loadmore {
+  padding: var(--em-4);
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 820px) {
+  .em-main {
+    padding: 0 var(--em-3);
+  }
+  .em-column {
+    max-width: none;
+  }
+  .em-pane-search {
+    width: 168px;
+  }
+  .em-row-subject {
+    max-width: 50%;
+  }
+}
+
+@media (max-width: 560px) {
+  .em-main {
+    padding: 0 var(--em-2);
+  }
+  .em-pane-title-text {
+    font-size: 1.04rem;
+  }
+  .em-pane-search {
+    width: 132px;
+  }
+}
+
+.em-sidebar-wrap {
+  flex: none;
+  height: 100%;
+  display: flex;
+}
+
+.em-sidebar-wrap > div {
+  width: auto !important;
+  min-height: 0 !important;
+  height: 100%;
+}
+
+.em-menu-btn {
+  display: none !important;
+}
+
+.em-sidebar-scrim {
+  display: none;
+}
+
+@media (max-width: 820px) {
+  .em-menu-btn {
+    display: inline-flex !important;
+  }
+  .em-sidebar-wrap {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 120;
+    transform: translateX(-105%);
+    transition: transform var(--em-med);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+  }
+  .em-sidebar-wrap.is-open {
+    transform: translateX(0);
+  }
+  .em-sidebar-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 110;
+    background: rgba(0, 0, 0, 0.5);
+    animation: em-fade var(--em-fast);
+  }
+  .em-main {
+    width: 100%;
+  }
+}
+
+.em-account-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex: none;
+  object-fit: cover;
+  background: var(--color-kumo-tint);
+}
+
+.em-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--em-4);
+  margin-bottom: var(--em-5);
+}
+
+.em-avatar-lg {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  flex: none;
+  object-fit: cover;
+}
+
+.em-avatar-mono {
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: #fff6fa;
+  text-transform: uppercase;
+}
+
+.em-avatar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--em-2);
+}
+
+.em-stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--em-2);
+}
+
+.em-stat-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+  color: var(--text-color-kumo-strong);
+}
+
+.em-stat-label {
+  font-size: 0.85rem;
+  color: var(--text-color-kumo-subtle);
+}

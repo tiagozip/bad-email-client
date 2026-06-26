@@ -1,0 +1,240 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { api } from "../api.js";
+import { useMailStore } from "../store.js";
+import { notify } from "../toast.js";
+import { recipientLine } from "../util.js";
+import { Admin } from "./Admin.jsx";
+import { Compose } from "./Compose.jsx";
+import { MailSidebar } from "./MailSidebar.jsx";
+import { MessageList } from "./MessageList.jsx";
+import { Settings } from "./Settings.jsx";
+import { Shortcuts } from "./Shortcuts.jsx";
+import { ThreadView } from "./ThreadView.jsx";
+
+function quoteBody(msg) {
+  const date = new Date(msg.date).toLocaleString();
+  const who = msg.from?.name || msg.from?.address || "someone";
+  const quoted = (msg.bodyText || "")
+    .split("\n")
+    .map((l) => `> ${l}`)
+    .join("\n");
+  return `\n\nOn ${date}, ${who} wrote:\n${quoted}`;
+}
+
+export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }) {
+  const store = useMailStore(initialUser);
+  const { user, setUser } = store;
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [composeInitial, setComposeInitial] = useState(null);
+  const [screen, setScreen] = useState("mail");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [cursor, setCursor] = useState(-1);
+  const searchRef = useRef(null);
+  const gPressed = useRef(false);
+
+  const openCompose = useCallback((initial) => {
+    setComposeInitial(initial || null);
+    setComposeOpen(true);
+  }, []);
+
+  function startReply(msg, kind) {
+    const re = /^re:/i.test(msg.subject || "") ? msg.subject : `Re: ${msg.subject || ""}`;
+    const toList = kind === "replyAll" ? [msg.from?.address, ...(msg.to || []).map((t) => t.address)] : [msg.from?.address];
+    const ccList = kind === "replyAll" ? (msg.cc || []).map((c) => c.address) : [];
+    const dedup = [...new Set(toList.filter((a) => a && a !== user.address))];
+    openCompose({
+      to: dedup.join(", "),
+      cc: ccList.filter((a) => a !== user.address).join(", "),
+      subject: re,
+      body: quoteBody(msg),
+      inReplyTo: msg.rfcMessageId,
+      references: [...(msg.references || []), msg.rfcMessageId].filter(Boolean),
+    });
+  }
+
+  function startForward(msg) {
+    const fw = /^fwd:/i.test(msg.subject || "") ? msg.subject : `Fwd: ${msg.subject || ""}`;
+    const header = `\n\n---------- Forwarded message ----------\nFrom: ${msg.from?.name || ""} <${msg.from?.address}>\nDate: ${new Date(msg.date).toLocaleString()}\nSubject: ${msg.subject}\nTo: ${recipientLine(msg.to)}\n\n${msg.bodyText || ""}`;
+    openCompose({ subject: fw, body: header });
+  }
+
+  function openByIndex(idx) {
+    const item = store.messages[idx];
+    if (!item) return;
+    store.openMessage(item);
+  }
+
+  function closeReader() {
+    store.closeMessage();
+    setCursor(-1);
+  }
+
+  useEffect(() => {
+    function onKey(e) {
+      const tag = e.target?.tagName;
+      const typing = tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable;
+      if (typing) {
+        if (e.key === "Escape") e.target.blur();
+        return;
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (composeOpen) return;
+
+      if (e.key === "?") {
+        setShowHelp((s) => !s);
+        return;
+      }
+      if (showHelp && e.key === "Escape") {
+        setShowHelp(false);
+        return;
+      }
+      if (gPressed.current) {
+        gPressed.current = false;
+        if (e.key === "i") store.goView({ kind: "folder", folder: "inbox" });
+        return;
+      }
+      if (e.key === "g") {
+        gPressed.current = true;
+        setTimeout(() => {
+          gPressed.current = false;
+        }, 800);
+        return;
+      }
+      if (e.key === "c") {
+        openCompose();
+        return;
+      }
+      if (e.key === "/") {
+        e.preventDefault();
+        searchRef.current?.focus();
+        return;
+      }
+      if (e.key === "j") {
+        setCursor((c) => {
+          const next = Math.min(store.messages.length - 1, c + 1);
+          openByIndex(next);
+          return next;
+        });
+        return;
+      }
+      if (e.key === "k") {
+        setCursor((c) => {
+          const next = Math.max(0, c - 1);
+          openByIndex(next);
+          return next;
+        });
+        return;
+      }
+      const open = store.messages.find((m) => m.id === store.openId);
+      if (e.key === "Enter" && cursor >= 0) {
+        openByIndex(cursor);
+        return;
+      }
+      if (!open) return;
+      if (e.key === "Escape" || e.key === "Backspace") {
+        e.preventDefault();
+        closeReader();
+        return;
+      }
+      if (e.key === "e") store.moveMessage(open, "archive");
+      else if (e.key === "#") store.moveMessage(open, "trash");
+      else if (e.key === "s") store.toggleStar(open);
+      else if (e.key === "r") startReply(open, "reply");
+      else if (e.key === "u") {
+        store.setReadState(open, false);
+        closeReader();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  async function signOut() {
+    const res = await api.logout().catch(() => null);
+    if (res?.logoutUrl) {
+      window.location.href = res.logoutUrl;
+      return;
+    }
+    setUser(null);
+    window.location.reload();
+  }
+
+  function afterMutation() {
+    store.reload();
+    store.refreshCounts();
+  }
+
+  const readerOpen = !!store.openId;
+
+  return (
+    <div className="em-app">
+      {sidebarOpen && <div className="em-sidebar-scrim" onClick={() => setSidebarOpen(false)} />}
+      <div className={`em-sidebar-wrap${sidebarOpen ? " is-open" : ""}`}>
+        <MailSidebar
+          store={store}
+          mode={mode}
+          onToggleMode={() => onSetMode(mode === "dark" ? "light" : "dark")}
+          onCompose={() => {
+            setSidebarOpen(false);
+            openCompose();
+          }}
+          onOpenSettings={() => {
+            setSidebarOpen(false);
+            setScreen("settings");
+          }}
+          onOpenAdmin={() => {
+            setSidebarOpen(false);
+            setScreen("admin");
+          }}
+          onSignOut={signOut}
+          onNavigate={() => setSidebarOpen(false)}
+        />
+      </div>
+
+      {screen === "settings" ? (
+        <Settings
+          user={user}
+          setUser={setUser}
+          mode={mode}
+          onSetMode={onSetMode}
+          palette={palette}
+          onSetPalette={onSetPalette}
+          onBack={() => setScreen("mail")}
+        />
+      ) : screen === "admin" ? (
+        <Admin onBack={() => setScreen("mail")} />
+      ) : (
+        <div className="em-main">
+          <div className="em-column">
+            {readerOpen ? (
+              <ThreadView
+                key="reader"
+                store={store}
+                onReply={startReply}
+                onForward={startForward}
+                onBack={closeReader}
+              />
+            ) : (
+              <MessageList
+                key="list"
+                store={store}
+                searchRef={searchRef}
+                onMenu={() => setSidebarOpen(true)}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      <Compose
+        open={composeOpen}
+        initial={composeInitial}
+        user={user}
+        onClose={() => setComposeOpen(false)}
+        onSent={afterMutation}
+      />
+      {showHelp && <Shortcuts onClose={() => setShowHelp(false)} />}
+    </div>
+  );
+}
