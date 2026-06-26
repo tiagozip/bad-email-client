@@ -60,11 +60,13 @@ export async function insertMessage(env, row) {
     raw_key: row.raw_key || null,
     html_key: row.html_key || null,
     pgp: row.pgp ? 1 : 0,
+    auth_status: row.auth_status || "none",
+    auth_detail: row.auth_detail || null,
     created_at: now(),
   };
   await env.DB.prepare(
-    `INSERT INTO messages (id,user_id,thread_id,rfc_message_id,in_reply_to,refs,folder,from_addr,from_name,to_json,cc_json,bcc_json,reply_to,subject,snippet,body_text,has_html,date,received_at,is_read,is_starred,is_draft,has_attachments,size,raw_key,html_key,pgp,created_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO messages (id,user_id,thread_id,rfc_message_id,in_reply_to,refs,folder,from_addr,from_name,to_json,cc_json,bcc_json,reply_to,subject,snippet,body_text,has_html,date,received_at,is_read,is_starred,is_draft,has_attachments,size,raw_key,html_key,pgp,auth_status,auth_detail,created_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
   )
     .bind(
       m.id,
@@ -94,6 +96,8 @@ export async function insertMessage(env, row) {
       m.raw_key,
       m.html_key,
       m.pgp,
+      m.auth_status,
+      m.auth_detail,
       m.created_at,
     )
     .run();

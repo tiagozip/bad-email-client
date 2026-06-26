@@ -2279,3 +2279,41 @@ html[data-theme="sakura"] {
   font-size: 0.85rem;
   color: var(--text-color-kumo-subtle);
 }
+
+.em-spoof-banner {
+  display: flex;
+  gap: var(--em-3);
+  align-items: flex-start;
+  padding: var(--em-4);
+  margin-bottom: var(--em-4);
+  border-radius: var(--em-radius);
+  background: #b3122b;
+  color: #ffffff;
+  border: 1px solid #e0556b;
+}
+.em-spoof-banner svg {
+  flex: none;
+  margin-top: 1px;
+  color: #ffffff;
+}
+.em-spoof-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+  margin-bottom: 3px;
+}
+.em-spoof-text {
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: #ffe1e5;
+}
+.em-spoof-detail {
+  display: block;
+  margin-top: 6px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.76rem;
+  color: #ffccd2;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}

@@ -245,6 +245,27 @@ function MessageCard({ message, expanded, onToggle, onShowImages, onUnlocked }) 
 
       {expanded && (
         <div className="em-msg-body">
+          {message.authStatus === "fail" && (
+            <div className="em-spoof-banner">
+              <Warning size={24} weight="fill" />
+              <div className="em-spoof-copy">
+                <div className="em-spoof-title">Warning: this message may be spoofed</div>
+                <div className="em-spoof-text">
+                  The sender's identity could not be verified, the From address may be forged
+                  (SPF, DKIM, and DMARC checks failed). Do not trust links, attachments, or any
+                  request to log in, pay, or share information in this message.
+                  {message.authDetail && (
+                    <span className="em-spoof-detail">
+                      {" "}
+                      SPF {message.authDetail.spf || "none"} / DKIM{" "}
+                      {message.authDetail.dkim || "none"} / DMARC{" "}
+                      {message.authDetail.dmarc || "none"}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
           {hasBlocked && (
             <div className="em-images-bar">
               <Image size={15} />

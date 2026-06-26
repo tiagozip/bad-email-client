@@ -25,6 +25,19 @@ function refsToList(value) {
   return String(value).split(/\s+/).filter(Boolean);
 }
 
+function evaluateAuth(message) {
+  const ar = (message.headers.get("authentication-results") || "").toLowerCase();
+  const grab = (re) => (ar.match(re) || [])[1] || null;
+  const spf = grab(/[^-]spf=(\w+)/) || grab(/^spf=(\w+)/) ||
+    ((message.headers.get("received-spf") || "").toLowerCase().match(/^\s*(\w+)/) || [])[1] || null;
+  const dkim = grab(/dkim=(\w+)/);
+  const dmarc = grab(/dmarc=(\w+)/);
+  let status = "none";
+  if (dmarc) status = dmarc === "pass" ? "pass" : "fail";
+  else if (spf || dkim) status = spf === "pass" || dkim === "pass" ? "pass" : "fail";
+  return { status, spf, dkim, dmarc };
+}
+
 async function resolveRecipient(env, to) {
   const addr = normalizeAddr(to);
   const direct = await env.DB.prepare("SELECT user_id FROM addresses WHERE address = ?")
@@ -158,6 +171,11 @@ export async function handleEmail(message, env, ctx) {
   const fromName = parsed.from?.name || "";
   const date = parsed.date ? new Date(parsed.date).getTime() || now() : now();
 
+  const auth = evaluateAuth(message);
+  const spoofed = auth.status === "fail";
+  const folder = spoofed ? "spam" : "inbox";
+  console.log("inbound auth", fromAddr, "->", JSON.stringify(auth), spoofed ? "SPOOFED->spam" : "");
+
   await insertMessage(env, {
     id: messageId,
     user_id: userId,
@@ -165,7 +183,9 @@ export async function handleEmail(message, env, ctx) {
     rfc_message_id: parsed.messageId || message.headers.get("message-id") || null,
     in_reply_to: inReplyTo,
     refs: refs.join(" "),
-    folder: "inbox",
+    folder,
+    auth_status: auth.status,
+    auth_detail: JSON.stringify({ spf: auth.spf, dkim: auth.dkim, dmarc: auth.dmarc, envelopeFrom: message.from }),
     from_addr: fromAddr,
     from_name: fromName,
     to: (parsed.to || []).map((a) => ({ name: a.name || "", address: normalizeAddr(a.address) })),

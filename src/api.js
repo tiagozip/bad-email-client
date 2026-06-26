@@ -59,6 +59,7 @@ function listItem(row) {
     isDraft: !!row.is_draft,
     hasAttachments: !!row.has_attachments,
     pgp: !!row.pgp,
+    authStatus: row.auth_status || "none",
   };
 }
 
@@ -323,6 +324,7 @@ async function getMessage(env, user, id, allowRemote) {
       rfcMessageId: row.rfc_message_id,
       inReplyTo: row.in_reply_to,
       references: row.refs ? row.refs.split(" ") : [],
+    authDetail: row.auth_detail ? JSON.parse(row.auth_detail) : null,
       bodyText: armored,
       bodyHtml: null,
       hasHtml: !!row.has_html,
@@ -349,6 +351,7 @@ async function getMessage(env, user, id, allowRemote) {
     rfcMessageId: row.rfc_message_id,
     inReplyTo: row.in_reply_to,
     references: row.refs ? row.refs.split(" ") : [],
+    authDetail: row.auth_detail ? JSON.parse(row.auth_detail) : null,
     bodyText: row.body_text,
     bodyHtml,
     hasHtml: !!row.has_html,

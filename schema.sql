@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS messages (
   raw_key TEXT,
   html_key TEXT,
   pgp INTEGER NOT NULL DEFAULT 0,
+  auth_status TEXT NOT NULL DEFAULT 'none',
+  auth_detail TEXT,
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_messages_folder ON messages(user_id, folder, date DESC);
