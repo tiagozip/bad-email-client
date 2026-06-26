@@ -8,6 +8,12 @@ import {
   DotsThree,
   DownloadSimple,
   Envelope,
+  File as FileIcon,
+  FileDoc,
+  FileImage,
+  FilePdf,
+  FileText,
+  FileZip,
   Image,
   Lock,
   LockKeyOpen,
@@ -208,6 +214,48 @@ function PlainBody({ text }) {
   );
 }
 
+function attIcon(mime) {
+  const m = mime || "";
+  if (m.startsWith("image/")) return FileImage;
+  if (m === "application/pdf") return FilePdf;
+  if (m.includes("zip") || m.includes("compressed") || m.includes("tar") || m.includes("rar")) return FileZip;
+  if (m.includes("word") || m.includes("opendocument.text") || m.includes("msword")) return FileDoc;
+  if (m.startsWith("text/")) return FileText;
+  return FileIcon;
+}
+
+function Attachment({ att }) {
+  const mime = att.mime || att.contentType || "";
+  const isImage = mime.startsWith("image/");
+  const downloadHref = `/api/attachments/${att.id}`;
+  const inlineHref = `/api/attachments/${att.id}/inline`;
+
+  if (isImage) {
+    return (
+      <div className="em-att-image">
+        <a href={inlineHref} target="_blank" rel="noopener noreferrer" className="em-att-image-thumb">
+          <img src={inlineHref} alt={att.filename} loading="lazy" />
+        </a>
+        <a className="em-att-image-bar" href={downloadHref} target="_blank" rel="noopener noreferrer">
+          <DownloadSimple size={13} />
+          <span className="em-att-name">{att.filename}</span>
+          <span className="em-att-size">{humanSize(att.size)}</span>
+        </a>
+      </div>
+    );
+  }
+
+  const Glyph = attIcon(mime);
+  return (
+    <a className="em-att-chip" href={downloadHref} target="_blank" rel="noopener noreferrer">
+      <Glyph size={18} className="em-att-glyph" />
+      <span className="em-att-name">{att.filename}</span>
+      <span className="em-att-size">{humanSize(att.size)}</span>
+      <DownloadSimple size={14} className="em-att-dl" />
+    </a>
+  );
+}
+
 function MessageCard({ message, expanded, onToggle, onShowImages, onUnlocked }) {
   const remoteShown = message._imagesShown;
   const hasBlocked = !message.pgp && !remoteShown && htmlHasBlockedImages(message.bodyHtml);
@@ -285,17 +333,7 @@ function MessageCard({ message, expanded, onToggle, onShowImages, onUnlocked }) 
           {message.attachments?.length > 0 && (
             <div className="em-att-row">
               {message.attachments.map((a) => (
-                <a
-                  key={a.id}
-                  className="em-att-chip"
-                  href={`/api/attachments/${a.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <DownloadSimple size={14} />
-                  {a.filename}
-                  <span className="em-att-size">{humanSize(a.size)}</span>
-                </a>
+                <Attachment key={a.id} att={a} />
               ))}
             </div>
           )}

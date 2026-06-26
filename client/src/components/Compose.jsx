@@ -1,10 +1,31 @@
-import { Button, Dialog, DialogRoot, Input, Select } from "@cloudflare/kumo";
-import { PaperPlaneTilt, Paperclip, Trash, X } from "@phosphor-icons/react";
+import { Button, Dialog, DialogRoot, Input, Loader, Select } from "@cloudflare/kumo";
+import {
+  File as FileIcon,
+  FileDoc,
+  FileImage,
+  FilePdf,
+  FileText,
+  FileZip,
+  PaperPlaneTilt,
+  Paperclip,
+  Trash,
+  X,
+} from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 import { notify, notifyError } from "../toast.js";
 import { humanSize, parseRecipients, plainBodyToHtml } from "../util.js";
 import { RichEditor } from "./RichEditor.jsx";
+
+function attIcon(mime) {
+  const m = mime || "";
+  if (m.startsWith("image/")) return FileImage;
+  if (m === "application/pdf") return FilePdf;
+  if (m.includes("zip") || m.includes("compressed") || m.includes("tar") || m.includes("rar")) return FileZip;
+  if (m.includes("word") || m.includes("opendocument.text") || m.includes("msword")) return FileDoc;
+  if (m.startsWith("text/")) return FileText;
+  return FileIcon;
+}
 
 function RecipientField({ label, value, onChange, autoFocus }) {
   const [suggestions, setSuggestions] = useState([]);
@@ -85,9 +106,36 @@ export function Compose({ open, initial, user, onClose, onSent }) {
   const [busy, setBusy] = useState(false);
   const [draftId, setDraftId] = useState(null);
   const [meta, setMeta] = useState({});
+  const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef(null);
   const saveTimer = useRef(null);
   const draftIdRef = useRef(null);
+  const dragDepth = useRef(0);
+  const previews = useRef(new Map());
+
+  function previewUrl(id, file) {
+    if (!file || !file.type?.startsWith("image/")) return null;
+    const existing = previews.current.get(id);
+    if (existing) return existing;
+    const url = URL.createObjectURL(file);
+    previews.current.set(id, url);
+    return url;
+  }
+
+  function revokePreview(id) {
+    const url = previews.current.get(id);
+    if (url) {
+      URL.revokeObjectURL(url);
+      previews.current.delete(id);
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      for (const url of previews.current.values()) URL.revokeObjectURL(url);
+      previews.current.clear();
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -103,7 +151,11 @@ export function Compose({ open, initial, user, onClose, onSent }) {
     if (editorRef.current) editorRef.current.commands.setContent(html || "<p></p>");
     setShowCc(!!init.cc);
     setShowBcc(false);
+    for (const url of previews.current.values()) URL.revokeObjectURL(url);
+    previews.current.clear();
     setAtts([]);
+    setDragOver(false);
+    dragDepth.current = 0;
     setDraftId(null);
     draftIdRef.current = null;
     setMeta({ inReplyTo: init.inReplyTo, references: init.references || [] });
@@ -136,23 +188,82 @@ export function Compose({ open, initial, user, onClose, onSent }) {
     } catch {}
   }
 
-  async function onPickFiles(e) {
-    const files = [...(e.target.files || [])];
-    e.target.value = "";
-    for (const file of files) {
-      const tmp = { id: `pending-${Math.random()}`, filename: file.name, size: file.size, pending: true };
-      setAtts((p) => [...p, tmp]);
-      try {
-        const d = await api.uploadAttachment(file);
-        setAtts((p) => p.map((a) => (a.id === tmp.id ? d : a)));
-      } catch (err) {
-        setAtts((p) => p.filter((a) => a.id !== tmp.id));
-        notifyError(err);
-      }
+  async function uploadFile(file) {
+    const tmpId = `pending-${Math.random()}`;
+    const tmp = { id: tmpId, filename: file.name, mime: file.type, size: file.size, pending: true, file };
+    setAtts((p) => [...p, tmp]);
+    try {
+      const d = await api.uploadAttachment(file);
+      previewUrl(d.id, file);
+      revokePreview(tmpId);
+      setAtts((p) => p.map((a) => (a.id === tmpId ? { ...d, file } : a)));
+    } catch (err) {
+      revokePreview(tmpId);
+      setAtts((p) => p.filter((a) => a.id !== tmpId));
+      notifyError(err);
     }
   }
 
+  async function uploadFiles(files) {
+    for (const file of files) await uploadFile(file);
+  }
+
+  async function onPickFiles(e) {
+    const files = [...(e.target.files || [])];
+    e.target.value = "";
+    await uploadFiles(files);
+  }
+
+  async function onPaste(e) {
+    const items = [...(e.clipboardData?.items || [])];
+    const images = items.filter((it) => it.kind === "file" && it.type.startsWith("image/"));
+    if (!images.length) return;
+    e.preventDefault();
+    const files = [];
+    for (const it of images) {
+      const blob = it.getAsFile();
+      if (!blob) continue;
+      const ext = (blob.type.split("/")[1] || "png").split("+")[0];
+      const named = blob.name
+        ? blob
+        : new File([blob], `pasted-${Date.now()}.${ext}`, { type: blob.type });
+      files.push(named);
+    }
+    if (!files.length) return;
+    await uploadFiles(files);
+    notify("Image attached", files.length > 1 ? `${files.length} pasted images attached.` : "Pasted image attached.", "success");
+  }
+
+  function onDragEnter(e) {
+    if (![...(e.dataTransfer?.types || [])].includes("Files")) return;
+    e.preventDefault();
+    dragDepth.current += 1;
+    setDragOver(true);
+  }
+
+  function onDragOver(e) {
+    if (![...(e.dataTransfer?.types || [])].includes("Files")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }
+
+  function onDragLeave(e) {
+    if (![...(e.dataTransfer?.types || [])].includes("Files")) return;
+    dragDepth.current = Math.max(0, dragDepth.current - 1);
+    if (dragDepth.current === 0) setDragOver(false);
+  }
+
+  async function onDrop(e) {
+    if (![...(e.dataTransfer?.types || [])].includes("Files")) return;
+    e.preventDefault();
+    dragDepth.current = 0;
+    setDragOver(false);
+    const files = [...(e.dataTransfer?.files || [])];
+    if (files.length) await uploadFiles(files);
+  }
+
   async function removeAtt(att) {
+    revokePreview(att.id);
     setAtts((p) => p.filter((a) => a.id !== att.id));
     if (!att.pending) await api.deleteAttachment(att.id).catch(() => {});
   }
@@ -207,7 +318,21 @@ export function Compose({ open, initial, user, onClose, onSent }) {
 
   return (
     <DialogRoot open={open} onOpenChange={(o) => !o && onClose()}>
-      <Dialog style={{ width: 640, maxWidth: "94vw", padding: 24 }}>
+      <Dialog
+        style={{ width: 640, maxWidth: "94vw", padding: 24 }}
+        className={dragOver ? "em-compose-dragging" : undefined}
+        onPaste={onPaste}
+        onDragEnter={onDragEnter}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+      >
+        {dragOver && (
+          <div className="em-drop-overlay">
+            <Paperclip size={26} />
+            <span>Drop to attach</span>
+          </div>
+        )}
         <Dialog.Title className="em-display" style={{ marginBottom: 16 }}>
           New message
         </Dialog.Title>
@@ -263,18 +388,30 @@ export function Compose({ open, initial, user, onClose, onSent }) {
           />
           {atts.length > 0 && (
             <div className="em-pending-atts">
-              {atts.map((a) => (
-                <span key={a.id} className="em-pending-chip">
-                  <Paperclip size={13} />
-                  {a.filename}
-                  <span style={{ color: "var(--text-color-kumo-subtle)" }}>
-                    {a.pending ? "…" : humanSize(a.size)}
+              {atts.map((a) => {
+                const thumb = previewUrl(a.id, a.file);
+                const Glyph = attIcon(a.mime);
+                return (
+                  <span key={a.id} className="em-pending-chip">
+                    <span className="em-pending-thumb">
+                      {a.pending ? (
+                        <Loader size="sm" />
+                      ) : thumb ? (
+                        <img src={thumb} alt="" />
+                      ) : (
+                        <Glyph size={18} />
+                      )}
+                    </span>
+                    <span className="em-pending-meta">
+                      <span className="em-pending-name">{a.filename}</span>
+                      <span className="em-pending-size">{a.pending ? "Uploading…" : humanSize(a.size)}</span>
+                    </span>
+                    <button type="button" className="em-pending-x" aria-label="Remove" onClick={() => removeAtt(a)}>
+                      <X size={12} />
+                    </button>
                   </span>
-                  <button type="button" className="em-pending-x" aria-label="Remove" onClick={() => removeAtt(a)}>
-                    <X size={12} />
-                  </button>
-                </span>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

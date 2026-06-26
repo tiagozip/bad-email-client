@@ -1096,6 +1096,84 @@ html[data-theme="sakura"] {
 
 .em-att-size {
   color: var(--text-color-kumo-subtle);
+  flex: none;
+}
+
+.em-att-chip .em-att-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.em-att-glyph {
+  flex: none;
+  color: var(--text-color-kumo-subtle);
+}
+
+.em-att-dl {
+  flex: none;
+  color: var(--text-color-kumo-inactive);
+}
+
+.em-att-image {
+  display: inline-flex;
+  flex-direction: column;
+  border: 1px solid var(--color-kumo-line);
+  border-radius: var(--em-radius);
+  overflow: hidden;
+  background: var(--color-kumo-base);
+  max-width: 220px;
+}
+
+.em-att-image-thumb {
+  display: block;
+  line-height: 0;
+}
+
+.em-att-image-thumb img {
+  width: 220px;
+  height: 140px;
+  object-fit: cover;
+  display: block;
+}
+
+.em-att-image-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--em-2);
+  padding: 7px 10px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--text-color-kumo-default);
+  border-top: 1px solid var(--color-kumo-hairline);
+  transition: background var(--em-fast);
+}
+
+.em-att-image-bar:hover {
+  background: var(--color-kumo-fill-hover);
+}
+
+.em-compose-dragging {
+  outline: 2px dashed var(--color-kumo-interact);
+  outline-offset: -6px;
+}
+
+.em-drop-overlay {
+  position: absolute;
+  inset: 4px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--em-3);
+  border-radius: var(--em-radius-lg);
+  background: color-mix(in srgb, var(--color-kumo-base) 86%, transparent);
+  color: var(--text-color-kumo-default);
+  font-weight: 600;
+  pointer-events: none;
 }
 
 .em-quickreply {
@@ -1728,12 +1806,51 @@ html[data-theme="sakura"] {
 .em-pending-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 9px;
+  gap: var(--em-2);
+  padding: 6px 9px 6px 6px;
   border: 1px solid var(--color-kumo-line);
   border-radius: var(--em-radius);
   font-size: 0.78rem;
   background: var(--color-kumo-base);
+  max-width: 220px;
+}
+
+.em-pending-thumb {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: var(--em-radius-sm);
+  background: var(--color-kumo-tint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: var(--text-color-kumo-subtle);
+}
+
+.em-pending-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.em-pending-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.em-pending-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.em-pending-size {
+  color: var(--text-color-kumo-subtle);
+  font-size: 0.7rem;
 }
 
 .em-pending-x {
@@ -1890,6 +2007,11 @@ html[data-theme="sakura"] {
 .em-account-caret {
   color: var(--text-color-kumo-inactive);
   flex: none;
+}
+
+.em-account-menu {
+  z-index: 200;
+  max-width: min(280px, calc(100vw - 24px));
 }
 
 .em-table {

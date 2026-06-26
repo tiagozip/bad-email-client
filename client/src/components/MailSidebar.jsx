@@ -201,7 +201,7 @@ export function MailSidebar({
                 </button>
               )}
             />
-            <DropdownMenu.Content>
+            <DropdownMenu.Content className="em-account-menu" style={{ zIndex: 200 }}>
               <DropdownMenu.Item icon={Gear} onClick={onOpenSettings}>
                 Settings
               </DropdownMenu.Item>
