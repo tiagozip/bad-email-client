@@ -505,7 +505,7 @@ export function Settings({ open, user, setUser, mode, onSetMode, palette, onSetP
 
   return (
     <DialogRoot open={open} onOpenChange={(o) => !o && onClose()}>
-      <Dialog className="em-settings-dialog" style={{ width: 600, maxWidth: "94vw", padding: 0 }}>
+      <Dialog className="em-settings-dialog" style={{ width: 760, maxWidth: "94vw", padding: 0 }}>
         <div className="em-settings-head">
           <Dialog.Title className="em-settings-title">Settings</Dialog.Title>
           <Button

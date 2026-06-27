@@ -1409,12 +1409,129 @@ html[data-theme="sakura"] {
 }
 
 .em-settings-body {
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.em-settings-rail {
+  flex: none;
+  width: 170px;
+  border-right: 1px solid var(--color-kumo-line);
+  padding: var(--em-4);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.em-settings-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--em-3);
+  width: 100%;
+  padding: 9px var(--em-3);
+  border: none;
+  background: none;
+  border-radius: var(--em-radius-sm);
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-color-kumo-subtle);
+  transition: background 0.12s, color 0.12s;
+}
+
+.em-settings-nav:hover {
+  background: var(--color-kumo-tint);
+  color: var(--text-color-kumo-strong);
+}
+
+.em-settings-nav.is-active {
+  background: var(--em-brand-soft);
+  color: var(--text-color-kumo-brand);
+}
+
+.em-settings-content {
+  flex: 1;
+  min-width: 0;
   overflow-y: auto;
   padding: var(--em-6);
 }
 
-.em-settings-body .em-card:last-of-type {
-  margin-bottom: var(--em-5);
+.em-settings-content > .em-card:last-of-type,
+.em-settings-content > :last-child {
+  margin-bottom: var(--em-2);
+}
+
+@media (max-width: 560px) {
+  .em-settings-body {
+    flex-direction: column;
+  }
+  .em-settings-rail {
+    flex-direction: row;
+    width: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--color-kumo-line);
+    overflow-x: auto;
+  }
+  .em-settings-nav {
+    width: auto;
+  }
+  .em-settings-nav span {
+    white-space: nowrap;
+  }
+}
+
+.em-e2e-dialog {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--em-3);
+}
+
+.em-e2e-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--em-brand-soft);
+  color: var(--text-color-kumo-brand);
+  margin-bottom: var(--em-2);
+}
+
+.em-e2e-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-size: 1.2rem;
+  color: var(--text-color-kumo-strong);
+}
+
+.em-e2e-copy {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-color-kumo-subtle);
+  margin: 0;
+}
+
+.em-e2e-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--em-4);
+  width: 100%;
+  text-align: left;
+  margin-top: var(--em-3);
+}
+
+.em-e2e-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--em-3);
+  margin-top: var(--em-2);
 }
 
 .em-card {
@@ -2482,40 +2599,6 @@ html[data-theme="sakura"] {
   color: #ffccd2;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-}
-
-.em-pgp-nudge {
-  display: flex;
-  align-items: center;
-  gap: var(--em-3);
-  padding: 10px var(--em-4);
-  margin: var(--em-3) 0 0;
-  border-radius: var(--em-radius);
-  background: var(--em-brand-soft);
-  border: 1px solid var(--em-brand-soft-border);
-}
-.em-pgp-nudge > svg:first-child {
-  color: var(--color-kumo-brand);
-  flex: none;
-}
-.em-pgp-nudge-text {
-  flex: 1;
-  font-size: 0.86rem;
-  color: var(--text-color-kumo-default);
-}
-.em-pgp-nudge-x {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  flex: none;
-  color: var(--text-color-kumo-subtle);
-  transition: background var(--em-fast);
-}
-.em-pgp-nudge-x:hover {
-  background: var(--color-kumo-fill-hover);
-  color: var(--text-color-kumo-default);
 }
 
 .em-pgp-remember {
