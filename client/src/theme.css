@@ -228,6 +228,8 @@ html[data-theme="sakura"] {
 
 .em-app {
   display: flex;
+  justify-content: center;
+  gap: var(--em-7);
   height: 100%;
   width: 100%;
 }
@@ -258,14 +260,16 @@ html[data-theme="sakura"] {
 }
 
 .em-main {
-  flex: 1;
+  flex: none;
+  width: 760px;
+  max-width: 100%;
   min-width: 0;
   display: flex;
   justify-content: center;
   height: 100%;
   overflow: hidden;
   background: transparent;
-  padding: 0 var(--em-6);
+  padding: 0 var(--em-3);
 }
 
 .em-column {
@@ -1540,6 +1544,7 @@ html[data-theme="sakura"] {
   align-items: center;
   text-align: center;
   gap: var(--em-3);
+  padding: var(--em-6);
 }
 
 .em-e2e-icon {
@@ -2660,26 +2665,25 @@ html[data-theme="sakura"] {
   flex: none;
   height: 100%;
   display: flex;
+  width: 212px;
 }
 
 .em-sidebar-wrap > div {
-  width: auto !important;
+  width: 212px !important;
   min-height: 0 !important;
   height: 100%;
 }
 
-.em-sidebar-wrap > div,
-.em-sidebar-wrap > div > div,
-.em-sidebar-wrap [data-slot="sidebar"],
-.em-sidebar-wrap [data-slot="sidebar-inner"],
-.em-sidebar-wrap [data-slot="sidebar-content"] {
+.em-sidebar-wrap [class*="flex-col"][class*="h-full"] {
+  width: 212px !important;
   background: transparent !important;
-  border: none !important;
+  border-right: 0 !important;
   box-shadow: none !important;
 }
 
-.em-sidebar-wrap [data-slot="sidebar-content"] {
-  justify-content: center;
+.em-sidebar-wrap [class*="border-t"] {
+  border-top: 0 !important;
+  background: transparent !important;
 }
 
 .em-menu-btn {
