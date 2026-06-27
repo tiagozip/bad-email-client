@@ -1,6 +1,39 @@
 import { now, snippetFrom, uuid } from "./util.js";
 
 export const FOLDERS = ["inbox", "sent", "drafts", "archive", "trash", "spam"];
+export const FILTER_FIELDS = ["from", "to", "subject"];
+export const FILTER_ACTIONS = ["read", "archive", "star", "spam"];
+
+export async function applyFilters(env, userId, ctx) {
+  const res = await env.DB.prepare(
+    "SELECT field, match_value, action FROM filters WHERE user_id = ? ORDER BY position, created_at",
+  )
+    .bind(userId)
+    .all();
+  const rules = res.results || [];
+  const fields = {
+    from: `${ctx.fromName || ""} ${ctx.fromAddr || ""}`.toLowerCase(),
+    to: (ctx.to || [])
+      .map((t) => `${t.name || ""} ${t.address || ""}`)
+      .join(" ")
+      .toLowerCase(),
+    subject: String(ctx.subject || "").toLowerCase(),
+  };
+  const out = { folder: null, read: false, star: false };
+  for (const rule of rules) {
+    const needle = String(rule.match_value || "")
+      .trim()
+      .toLowerCase();
+    if (!needle) continue;
+    const hay = fields[rule.field];
+    if (hay === undefined || !hay.includes(needle)) continue;
+    if (rule.action === "read") out.read = true;
+    else if (rule.action === "star") out.star = true;
+    else if (rule.action === "archive") out.folder = "archive";
+    else if (rule.action === "spam") out.folder = "spam";
+  }
+  return out;
+}
 
 export function rawKey(userId, messageId) {
   return `raw/${userId}/${messageId}.eml`;
@@ -10,7 +43,7 @@ export function htmlKey(userId, messageId) {
 }
 export function attKey(userId, attachmentId, filename) {
   const safe = String(filename || "file")
-    .replace(/[^\w.\-]+/g, "_")
+    .replace(/[^\w.-]+/g, "_")
     .slice(0, 100);
   return `att/${userId}/${attachmentId}/${safe}`;
 }

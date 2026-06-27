@@ -20,7 +20,15 @@ import {
 } from "./oidc.js";
 import { sanitizeEmailHtml, stripTrackers } from "./sanitize.js";
 import { sendMessage } from "./send.js";
-import { attKey, deleteMessageRow, FOLDERS, insertMessage, updateStorage } from "./store.js";
+import {
+  attKey,
+  deleteMessageRow,
+  FILTER_ACTIONS,
+  FILTER_FIELDS,
+  FOLDERS,
+  insertMessage,
+  updateStorage,
+} from "./store.js";
 import {
   clampInt,
   error,
@@ -324,7 +332,7 @@ async function getMessage(env, user, id, allowRemote) {
       rfcMessageId: row.rfc_message_id,
       inReplyTo: row.in_reply_to,
       references: row.refs ? row.refs.split(" ") : [],
-    authDetail: row.auth_detail ? JSON.parse(row.auth_detail) : null,
+      authDetail: row.auth_detail ? JSON.parse(row.auth_detail) : null,
       bodyText: armored,
       bodyHtml: null,
       hasHtml: !!row.has_html,
@@ -724,6 +732,42 @@ export async function handleApi(request, env, ctx) {
     return json({ ok: true });
   }
 
+  if (path === "/api/filters" && method === "GET") {
+    const res = await env.DB.prepare(
+      "SELECT id, field, match_value, action, position FROM filters WHERE user_id = ? ORDER BY position, created_at",
+    )
+      .bind(user.id)
+      .all();
+    return json({ filters: res.results || [] });
+  }
+  if (path === "/api/filters" && method === "POST") {
+    const b = await readJson(request);
+    const field = FILTER_FIELDS.includes(b.field) ? b.field : null;
+    const action = FILTER_ACTIONS.includes(b.action) ? b.action : null;
+    const matchValue = String(b.matchValue || "")
+      .trim()
+      .slice(0, 200);
+    if (!field || !action) return error(400, "invalid field or action");
+    if (!matchValue) return error(400, "match value required");
+    const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM filters WHERE user_id = ?")
+      .bind(user.id)
+      .first();
+    if ((count?.n || 0) >= 100) return error(400, "filter limit reached (100)");
+    const id = uuid();
+    await env.DB.prepare(
+      "INSERT INTO filters (id, user_id, field, match_value, action, position, created_at) VALUES (?,?,?,?,?,?,?)",
+    )
+      .bind(id, user.id, field, matchValue, action, count?.n || 0, now())
+      .run();
+    return json({ id, field, match_value: matchValue, action, position: count?.n || 0 });
+  }
+  if ((m = path.match(/^\/api\/filters\/([\w-]+)$/)) && method === "DELETE") {
+    await env.DB.prepare("DELETE FROM filters WHERE id = ? AND user_id = ?")
+      .bind(m[1], user.id)
+      .run();
+    return json({ ok: true });
+  }
+
   if (path === "/api/aliases" && method === "GET") {
     return json({ addresses: await listAddresses(env, user.id) });
   }
@@ -870,13 +914,54 @@ export async function handleApi(request, env, ctx) {
   }
 
   if (path === "/api/contacts" && method === "GET") {
-    const q = (url.searchParams.get("q") || "").toLowerCase();
-    const res = await env.DB.prepare(
-      "SELECT address, name FROM contacts WHERE user_id = ? AND (address LIKE ? OR name LIKE ?) ORDER BY count DESC LIMIT 10",
-    )
-      .bind(user.id, `%${q}%`, `%${q}%`)
-      .all();
-    return json({ contacts: res.results || [] });
+    const q = (url.searchParams.get("q") || "").toLowerCase().trim();
+    const limit = clampInt(url.searchParams.get("limit"), 1, 20, 8);
+    const selfAddrs = new Set((await listAddresses(env, user.id)).map((a) => a.address));
+    const rows = q
+      ? (
+          await env.DB.prepare(
+            "SELECT address, name, count, last_seen FROM contacts WHERE user_id = ? AND (address LIKE ? OR name LIKE ?) ORDER BY count DESC, last_seen DESC LIMIT 60",
+          )
+            .bind(user.id, `%${q}%`, `%${q}%`)
+            .all()
+        ).results || []
+      : (
+          await env.DB.prepare(
+            "SELECT address, name, count, last_seen FROM contacts WHERE user_id = ? ORDER BY last_seen DESC, count DESC LIMIT 60",
+          )
+            .bind(user.id)
+            .all()
+        ).results || [];
+
+    const today = now();
+    const ranked = rows
+      .filter((r) => r.address && !selfAddrs.has(r.address))
+      .map((r) => {
+        const ageDays = Math.max(0, (today - (r.last_seen || 0)) / 86400000);
+        const recencyBoost = 2 ** (-ageDays / 30);
+        return { ...r, score: Math.log2((r.count || 1) + 1) * recencyBoost };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit);
+
+    const contacts = ranked.map((r) => ({ address: r.address, name: r.name || "" }));
+    const addrs = contacts.map((c) => c.address);
+    if (addrs.length) {
+      const ph = addrs.map(() => "?").join(",");
+      const av = await env.DB.prepare(
+        `SELECT a.address, u.avatar_url, u.display_name FROM addresses a JOIN users u ON u.id = a.user_id WHERE a.address IN (${ph})`,
+      )
+        .bind(...addrs)
+        .all();
+      const map = {};
+      for (const r of av.results || []) map[r.address] = r;
+      for (const c of contacts) {
+        const hit = map[c.address];
+        if (hit?.avatar_url) c.avatar = hit.avatar_url;
+        if (!c.name && hit?.display_name) c.name = hit.display_name;
+      }
+    }
+    return json({ contacts });
   }
 
   if (path === "/api/settings" && method === "PUT") {

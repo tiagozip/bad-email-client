@@ -1,5 +1,28 @@
-import { Badge, Button, ClipboardText, Dialog, DialogRoot, Input, Loader, Switch } from "@cloudflare/kumo";
-import { Camera, Check, Code, Lock, LockKey, Palette, Plus, Star, Trash, User, X } from "@phosphor-icons/react";
+import {
+  Badge,
+  Button,
+  ClipboardText,
+  Dialog,
+  DialogRoot,
+  Input,
+  Loader,
+  Select,
+  Switch,
+} from "@cloudflare/kumo";
+import {
+  Camera,
+  Check,
+  Code,
+  Funnel,
+  Lock,
+  LockKey,
+  Palette,
+  Plus,
+  Star,
+  Trash,
+  User,
+  X,
+} from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 import * as pgp from "../pgp.js";
@@ -409,9 +432,135 @@ function Encryption({ user, setUser }) {
   );
 }
 
+const FIELD_LABELS = { from: "From", to: "To", subject: "Subject" };
+const ACTION_LABELS = {
+  read: "mark as read",
+  archive: "archive it",
+  star: "star it",
+  spam: "move to spam",
+};
+
+function Filters() {
+  const [filters, setFilters] = useState(null);
+  const [field, setField] = useState("from");
+  const [matchValue, setMatchValue] = useState("");
+  const [action, setAction] = useState("archive");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api
+      .filters()
+      .then((d) => setFilters(d.filters || []))
+      .catch(notifyError);
+  }, []);
+
+  async function add(e) {
+    e.preventDefault();
+    const v = matchValue.trim();
+    if (!v) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res = await api.createFilter({ field, matchValue: v, action });
+      setFilters((p) => [...(p || []), res]);
+      setMatchValue("");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(id) {
+    try {
+      await api.deleteFilter(id);
+      setFilters((p) => (p || []).filter((f) => f.id !== id));
+    } catch (err) {
+      notifyError(err);
+    }
+  }
+
+  return (
+    <div className="em-card">
+      <div className="em-card-head">
+        <h2 className="em-card-title">Filters</h2>
+        <p className="em-card-sub">
+          Rules run on incoming mail, top to bottom. Matching is a simple contains check, not
+          case-sensitive.
+        </p>
+      </div>
+
+      {!filters ? (
+        <Loader size="sm" />
+      ) : filters.length === 0 ? (
+        <div className="em-keys-empty">No filters yet. Add one below.</div>
+      ) : (
+        <div className="em-filter-list">
+          {filters.map((f) => (
+            <div key={f.id} className="em-filter-row">
+              <span className="em-filter-rule">
+                If <strong>{FIELD_LABELS[f.field] || f.field}</strong> contains{" "}
+                <span className="em-filter-needle">{f.match_value}</span>, then{" "}
+                <strong>{ACTION_LABELS[f.action] || f.action}</strong>.
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                shape="square"
+                aria-label="Delete filter"
+                icon={Trash}
+                onClick={() => remove(f.id)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <form className="em-filter-add" onSubmit={add}>
+        <span className="em-filter-lead">If</span>
+        <Select aria-label="Field" size="sm" value={field} onValueChange={setField}>
+          {Object.entries(FIELD_LABELS).map(([k, v]) => (
+            <Select.Option key={k} value={k}>
+              {v}
+            </Select.Option>
+          ))}
+        </Select>
+        <span className="em-filter-lead">contains</span>
+        <Input
+          aria-label="Match value"
+          placeholder="text to match"
+          value={matchValue}
+          onChange={(e) => {
+            setMatchValue(e.target.value);
+            setError("");
+          }}
+        />
+        <span className="em-filter-lead">then</span>
+        <Select aria-label="Action" size="sm" value={action} onValueChange={setAction}>
+          {Object.entries(ACTION_LABELS).map(([k, v]) => (
+            <Select.Option key={k} value={k}>
+              {v}
+            </Select.Option>
+          ))}
+        </Select>
+        <Button type="submit" variant="outline" icon={Plus} loading={busy}>
+          Add
+        </Button>
+      </form>
+      {error && (
+        <div className="em-form-error" style={{ marginTop: 8 }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const SECTIONS = [
   { id: "account", label: "Account", icon: User },
   { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "filters", label: "Filters", icon: Funnel },
   { id: "encryption", label: "Encryption", icon: LockKey },
   { id: "developer", label: "Developer", icon: Code },
 ];
@@ -686,6 +835,8 @@ export function Settings({ open, user, setUser, mode, onSetMode, palette, onSetP
           </Button>
           </>
           )}
+
+          {section === "filters" && <Filters />}
 
           {section === "encryption" && <Encryption user={user} setUser={setUser} />}
 

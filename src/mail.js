@@ -3,6 +3,7 @@ import PostalMime from "postal-mime";
 import { encryptBytes, encryptText } from "./crypto.js";
 import { sanitizeEmailHtml } from "./sanitize.js";
 import {
+  applyFilters,
   attKey,
   bumpContact,
   htmlKey,
@@ -28,8 +29,11 @@ function refsToList(value) {
 function evaluateAuth(message) {
   const ar = (message.headers.get("authentication-results") || "").toLowerCase();
   const grab = (re) => (ar.match(re) || [])[1] || null;
-  const spf = grab(/[^-]spf=(\w+)/) || grab(/^spf=(\w+)/) ||
-    ((message.headers.get("received-spf") || "").toLowerCase().match(/^\s*(\w+)/) || [])[1] || null;
+  const spf =
+    grab(/[^-]spf=(\w+)/) ||
+    grab(/^spf=(\w+)/) ||
+    ((message.headers.get("received-spf") || "").toLowerCase().match(/^\s*(\w+)/) || [])[1] ||
+    null;
   const dkim = grab(/dkim=(\w+)/);
   const dmarc = grab(/dmarc=(\w+)/);
   let status = "none";
@@ -173,8 +177,26 @@ export async function handleEmail(message, env, ctx) {
 
   const auth = evaluateAuth(message);
   const spoofed = auth.status === "fail";
-  const folder = spoofed ? "spam" : "inbox";
+  let folder = spoofed ? "spam" : "inbox";
   console.log("inbound auth", fromAddr, "->", JSON.stringify(auth), spoofed ? "SPOOFED->spam" : "");
+
+  const toList = (parsed.to || []).map((a) => ({
+    name: a.name || "",
+    address: normalizeAddr(a.address),
+  }));
+  let filterRead = 0;
+  let filterStar = 0;
+  if (!spoofed) {
+    const applied = await applyFilters(env, userId, {
+      fromAddr,
+      fromName,
+      to: toList,
+      subject: parsed.subject || "",
+    });
+    if (applied.folder) folder = applied.folder;
+    if (applied.read) filterRead = 1;
+    if (applied.star) filterStar = 1;
+  }
 
   await insertMessage(env, {
     id: messageId,
@@ -185,10 +207,15 @@ export async function handleEmail(message, env, ctx) {
     refs: refs.join(" "),
     folder,
     auth_status: auth.status,
-    auth_detail: JSON.stringify({ spf: auth.spf, dkim: auth.dkim, dmarc: auth.dmarc, envelopeFrom: message.from }),
+    auth_detail: JSON.stringify({
+      spf: auth.spf,
+      dkim: auth.dkim,
+      dmarc: auth.dmarc,
+      envelopeFrom: message.from,
+    }),
     from_addr: fromAddr,
     from_name: fromName,
-    to: (parsed.to || []).map((a) => ({ name: a.name || "", address: normalizeAddr(a.address) })),
+    to: toList,
     cc: (parsed.cc || []).map((a) => ({ name: a.name || "", address: normalizeAddr(a.address) })),
     reply_to: normalizeAddr(parsed.replyTo?.[0]?.address || ""),
     subject: parsed.subject || "(no subject)",
@@ -199,7 +226,8 @@ export async function handleEmail(message, env, ctx) {
     has_html: hasHtml,
     date,
     received_at: now(),
-    is_read: 0,
+    is_read: filterRead,
+    is_starred: filterStar,
     has_attachments: attRows.some((a) => !a.isInline) ? 1 : 0,
     size: raw.byteLength,
     raw_key: rKey,
