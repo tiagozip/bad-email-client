@@ -262,9 +262,8 @@ html[data-theme="sakura"] {
 }
 
 .em-main {
-  flex: none;
-  width: 760px;
-  max-width: 100%;
+  flex: 1 1 auto;
+  max-width: 760px;
   min-width: 0;
   display: flex;
   justify-content: center;
@@ -2669,12 +2668,6 @@ html[data-theme="sakura"] {
   .em-column {
     max-width: none;
   }
-  .em-pane-search {
-    width: 168px;
-  }
-  .em-row-subject {
-    max-width: 50%;
-  }
 }
 
 @media (max-width: 560px) {
@@ -2743,10 +2736,10 @@ html[data-theme="sakura"] {
     z-index: 120;
     transform: translateX(-105%);
     transition: transform var(--em-med);
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
   }
   .em-sidebar-wrap.is-open {
     transform: translateX(0);
+    border-right: 1px solid var(--color-kumo-line);
   }
   .em-sidebar-scrim {
     display: block;
