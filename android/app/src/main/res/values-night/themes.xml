@@ -1,5 +1,5 @@
 <resources>
-    <style name="Theme.EstrogenMail" parent="android:Theme.Material.Light.NoActionBar">
+    <style name="Theme.EstrogenMail" parent="android:Theme.Material.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowBackground">@color/plum_background</item>
