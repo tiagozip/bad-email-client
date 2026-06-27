@@ -41,6 +41,23 @@ export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }
     setComposeOpen(true);
   }, []);
 
+  useEffect(() => {
+    const mailto = new URLSearchParams(window.location.search).get("mailto");
+    if (!mailto) return;
+    const raw = mailto.replace(/^mailto:/i, "");
+    const qIdx = raw.indexOf("?");
+    const qs = new URLSearchParams(qIdx === -1 ? "" : raw.slice(qIdx + 1));
+    openCompose({
+      to: decodeURIComponent(qIdx === -1 ? raw : raw.slice(0, qIdx)),
+      cc: qs.get("cc") || "",
+      subject: qs.get("subject") || "",
+      body: qs.get("body") || "",
+    });
+    const url = new URL(window.location.href);
+    url.searchParams.delete("mailto");
+    window.history.replaceState({}, "", url.pathname + url.search);
+  }, [openCompose]);
+
   function startReply(msg, kind) {
     const re = /^re:/i.test(msg.subject || "") ? msg.subject : `Re: ${msg.subject || ""}`;
     const toList = kind === "replyAll" ? [msg.from?.address, ...(msg.to || []).map((t) => t.address)] : [msg.from?.address];

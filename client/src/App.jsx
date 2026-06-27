@@ -33,6 +33,12 @@ export function App() {
   }, [palette]);
 
   useEffect(() => {
+    try {
+      navigator.registerProtocolHandler?.("mailto", `${window.location.origin}/?mailto=%s`);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
     api
       .me()
       .then((d) => {

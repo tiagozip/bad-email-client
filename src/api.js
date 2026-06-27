@@ -925,7 +925,6 @@ export async function handleApi(request, env, ctx) {
   }
 
   if (path === "/api/pgp" && method === "GET") {
-    if (!auth?.session) return error(403, "use the web app to manage pgp keys");
     const row = await env.DB.prepare(
       "SELECT pgp_enabled, pgp_public_key, pgp_private_key_enc FROM users WHERE id = ?",
     )
