@@ -15,6 +15,7 @@ import {
   Trash,
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import * as pgp from "../pgp.js";
 import { FOLDER_LABELS, groupThreads, initials, monoColor, relativeTime, senderLabel } from "../util.js";
 
 function StarToggle({ on, onClick }) {
@@ -33,10 +34,11 @@ function StarToggle({ on, onClick }) {
   );
 }
 
-function Row({ item, active, selected, selfAddresses, onOpen, onToggleSelect, onToggleStar }) {
+function Row({ item, active, selected, selfAddresses, decSnippet, onOpen, onToggleSelect, onToggleStar }) {
   const sender = senderLabel(item, selfAddresses);
   const addr = item.from?.address || "";
   const handle = addr.includes("@") ? `@${addr.split("@")[1]}` : addr;
+  const snip = item.pgp ? decSnippet || item.snippet : item.snippet;
   return (
     <div
       className={`em-row${active ? " is-active" : ""}${selected ? " is-selected" : ""}${item.isRead ? "" : " is-unread"}`}
@@ -62,7 +64,7 @@ function Row({ item, active, selected, selfAddresses, onOpen, onToggleSelect, on
           {item.hasAttachments && <Paperclip className="em-row-clip" size={14} weight="bold" />}
         </div>
         <div className="em-row-subject">{item.subject || "(no subject)"}</div>
-        {item.snippet && <div className="em-row-snippet">{item.snippet}</div>}
+        {snip && <div className="em-row-snippet">{snip}</div>}
         {item.labels?.length > 0 && (
           <div className="em-row-labels">
             {item.labels.map((l) => (
@@ -139,7 +141,35 @@ export function MessageList({ store, searchRef, onMenu, onCompose }) {
     toggleStar,
   } = store;
   const [query, setQuery] = useState("");
+  const [decSnippets, setDecSnippets] = useState({});
   const scrollRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let tries = 0;
+    async function run() {
+      if (cancelled) return;
+      if (!pgp.getUnlocked()) {
+        if (tries++ < 6) setTimeout(run, 700);
+        return;
+      }
+      const pending = messages.filter((m) => m.pgp && m.snippetEnc && decSnippets[m.id] === undefined);
+      if (!pending.length) return;
+      const updates = {};
+      for (const m of pending) {
+        try {
+          updates[m.id] = await pgp.decryptArmored(m.snippetEnc);
+        } catch {
+          updates[m.id] = null;
+        }
+      }
+      if (!cancelled) setDecSnippets((prev) => ({ ...prev, ...updates }));
+    }
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [messages]);
 
   const threads = useMemo(() => groupThreads(messages), [messages]);
   const selfAddresses = useMemo(
@@ -259,6 +289,7 @@ export function MessageList({ store, searchRef, onMenu, onCompose }) {
                 active={item._members?.some((m) => m.id === openId)}
                 selected={selectedIds.has(item.id)}
                 selfAddresses={selfAddresses}
+                decSnippet={decSnippets[item.id]}
                 onOpen={openMessage}
                 onToggleSelect={toggleSelect}
                 onToggleStar={toggleStar}

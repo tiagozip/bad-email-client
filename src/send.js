@@ -120,6 +120,11 @@ export async function sendMessage(env, user, payload) {
 
   const selfEncrypted = isE2E ? text : await pgpEncryptToSelf(env, user.id, html || text);
   const storedPgp = isE2E || !!selfEncrypted;
+  let snippetEnc = null;
+  if (!isE2E && selfEncrypted) {
+    const plainSnippet = snippetFrom(text || html.replace(/<[^>]+>/g, " "));
+    if (plainSnippet) snippetEnc = await pgpEncryptToSelf(env, user.id, plainSnippet);
+  }
   const storedBody = storedPgp
     ? selfEncrypted
     : html
@@ -147,7 +152,8 @@ export async function sendMessage(env, user, payload) {
     cc: cc.map((a) => ({ name: "", address: a })),
     bcc: bcc.map((a) => ({ name: "", address: a })),
     subject,
-    snippet: storedPgp ? "PGP encrypted message" : snippetFrom(text || html.replace(/<[^>]+>/g, " ")),
+    snippet: storedPgp ? "Encrypted message" : snippetFrom(text || html.replace(/<[^>]+>/g, " ")),
+    snippet_enc: snippetEnc,
     body_text: storedPgp ? "" : text,
     has_html: isE2E ? 0 : html ? 1 : 0,
     date: now(),

@@ -81,6 +81,7 @@ export async function insertMessage(env, row) {
     reply_to: row.reply_to || "",
     subject: row.subject || "",
     snippet: snippetFrom(row.snippet ?? row.body_text ?? ""),
+    snippet_enc: row.snippet_enc || null,
     body_text: (row.body_text || "").slice(0, 200000),
     has_html: row.has_html ? 1 : 0,
     date: row.date || now(),
@@ -98,8 +99,8 @@ export async function insertMessage(env, row) {
     created_at: now(),
   };
   await env.DB.prepare(
-    `INSERT INTO messages (id,user_id,thread_id,rfc_message_id,in_reply_to,refs,folder,from_addr,from_name,to_json,cc_json,bcc_json,reply_to,subject,snippet,body_text,has_html,date,received_at,is_read,is_starred,is_draft,has_attachments,size,raw_key,html_key,pgp,auth_status,auth_detail,created_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO messages (id,user_id,thread_id,rfc_message_id,in_reply_to,refs,folder,from_addr,from_name,to_json,cc_json,bcc_json,reply_to,subject,snippet,snippet_enc,body_text,has_html,date,received_at,is_read,is_starred,is_draft,has_attachments,size,raw_key,html_key,pgp,auth_status,auth_detail,created_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
   )
     .bind(
       m.id,
@@ -117,6 +118,7 @@ export async function insertMessage(env, row) {
       m.reply_to,
       m.subject,
       m.snippet,
+      m.snippet_enc,
       m.body_text,
       m.has_html,
       m.date,

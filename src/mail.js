@@ -209,6 +209,12 @@ export async function handleEmail(message, env, ctx) {
     name: a.name || "",
     address: normalizeAddr(a.address),
   }));
+  let snippetEnc = null;
+  if (pgpEncrypt) {
+    const plainSnippet = snippetFrom(parsed.text || parsed.html?.replace(/<[^>]+>/g, " ") || "");
+    if (plainSnippet) snippetEnc = await encryptToPgpText(plainSnippet);
+  }
+
   let filterRead = 0;
   let filterStar = 0;
   if (!spoofed) {
@@ -245,8 +251,9 @@ export async function handleEmail(message, env, ctx) {
     reply_to: normalizeAddr(parsed.replyTo?.[0]?.address || ""),
     subject: parsed.subject || "(no subject)",
     snippet: pgpFlag
-      ? "PGP encrypted message"
+      ? "Encrypted message"
       : snippetFrom(parsed.text || parsed.html?.replace(/<[^>]+>/g, " ") || ""),
+    snippet_enc: snippetEnc,
     body_text: pgpFlag ? "" : parsed.text || "",
     has_html: hasHtml,
     date,

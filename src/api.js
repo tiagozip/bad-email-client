@@ -78,6 +78,7 @@ function listItem(row) {
     to: JSON.parse(row.to_json || "[]"),
     subject: row.subject,
     snippet: row.snippet,
+    snippetEnc: row.snippet_enc || null,
     date: row.date,
     isRead: !!row.is_read,
     isStarred: !!row.is_starred,

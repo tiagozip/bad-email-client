@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS messages (
   reply_to TEXT NOT NULL DEFAULT '',
   subject TEXT NOT NULL DEFAULT '',
   snippet TEXT NOT NULL DEFAULT '',
+  snippet_enc TEXT,
   body_text TEXT NOT NULL DEFAULT '',
   has_html INTEGER NOT NULL DEFAULT 0,
   date INTEGER NOT NULL,
