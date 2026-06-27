@@ -12,6 +12,28 @@ import { Settings } from "./Settings.jsx";
 import { Shortcuts } from "./Shortcuts.jsx";
 import { ThreadView } from "./ThreadView.jsx";
 
+const PATH_FOLDERS = ["inbox", "sent", "drafts", "archive", "spam", "trash"];
+
+function pathFor(view, openId) {
+  if (openId) return `/message/${openId}`;
+  if (!view) return "/inbox";
+  if (view.kind === "starred") return "/starred";
+  if (view.kind === "label") return `/label/${view.labelId}`;
+  if (view.kind === "search") return `/search/${encodeURIComponent(view.q)}`;
+  return `/${view.folder || "inbox"}`;
+}
+
+function parsePath(pathname) {
+  const seg = pathname.replace(/^\/+|\/+$/g, "").split("/");
+  if (seg[0] === "message" && seg[1]) return { openId: decodeURIComponent(seg[1]) };
+  if (seg[0] === "label" && seg[1]) return { view: { kind: "label", labelId: decodeURIComponent(seg[1]) } };
+  if (seg[0] === "search" && seg[1])
+    return { view: { kind: "search", q: decodeURIComponent(seg.slice(1).join("/")) } };
+  if (seg[0] === "starred") return { view: { kind: "starred" } };
+  if (PATH_FOLDERS.includes(seg[0])) return { view: { kind: "folder", folder: seg[0] } };
+  return { view: { kind: "folder", folder: "inbox" } };
+}
+
 function quoteBody(msg) {
   const date = new Date(msg.date).toLocaleString();
   const who = msg.from?.name || msg.from?.address || "someone";
@@ -57,6 +79,28 @@ export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }
     url.searchParams.delete("mailto");
     window.history.replaceState({}, "", url.pathname + url.search);
   }, [openCompose]);
+
+  const didInit = useRef(false);
+  useEffect(() => {
+    if (didInit.current) return;
+    didInit.current = true;
+    const parsed = parsePath(window.location.pathname);
+    if (parsed.openId) {
+      api
+        .message(parsed.openId)
+        .then((d) => d?.message && store.openMessage({ id: d.message.id, threadId: d.message.threadId }))
+        .catch(() => {});
+    } else if (parsed.view && !(parsed.view.kind === "folder" && parsed.view.folder === "inbox")) {
+      store.goView(parsed.view);
+    }
+  }, [store]);
+
+  useEffect(() => {
+    const p = pathFor(store.view, store.openId);
+    if (window.location.pathname !== p) {
+      window.history.replaceState(window.history.state, "", p);
+    }
+  }, [store.view, store.openId]);
 
   function startReply(msg, kind) {
     const re = /^re:/i.test(msg.subject || "") ? msg.subject : `Re: ${msg.subject || ""}`;

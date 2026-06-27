@@ -392,6 +392,16 @@ html[data-theme="sakura"] {
   flex: none;
 }
 
+.em-reader-topbar svg {
+  width: 19px;
+  height: 19px;
+}
+
+.em-reader-topbar button[aria-label] {
+  width: 38px;
+  height: 38px;
+}
+
 .em-read-pane {
   flex: 1;
   min-width: 0;
