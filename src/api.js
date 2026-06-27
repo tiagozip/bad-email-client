@@ -215,6 +215,36 @@ async function upsertOidcUser(env, claims) {
 
 const ALIAS_RE = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/;
 const ALIAS_LIMIT = 100;
+const DOMAIN_RE = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+const CF_MX_RE = /(?:^|\.)mx\.cloudflare\.net\.?$/;
+
+async function lookupMx(domain) {
+  const res = await fetch(
+    `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=MX`,
+    { headers: { accept: "application/dns-json" } },
+  );
+  if (!res.ok) throw new Error("dns lookup failed");
+  const data = await res.json();
+  const records = (data.Answer || [])
+    .filter((a) => a.type === 15)
+    .map((a) => {
+      const parts = String(a.data || "")
+        .trim()
+        .split(/\s+/);
+      const target = (parts.length > 1 ? parts[1] : parts[0]).replace(/\.$/, "").toLowerCase();
+      return { priority: Number.parseInt(parts[0], 10) || 0, target };
+    });
+  const routesToCloudflare = records.length > 0 && records.every((r) => CF_MX_RE.test(r.target));
+  return { records, routesToCloudflare };
+}
+
+async function verifiedDomainSet(env) {
+  const set = new Set([String(env.MAIL_DOMAIN || "").toLowerCase()]);
+  const res = await env.DB.prepare("SELECT domain FROM domains WHERE verified = 1").all();
+  for (const r of res.results || []) set.add(String(r.domain).toLowerCase());
+  set.delete("");
+  return set;
+}
 
 async function listAddresses(env, userId) {
   const res = await env.DB.prepare(
@@ -434,7 +464,10 @@ async function downloadAttachment(env, user, id, inline) {
   const mime = (row.mime || "application/octet-stream").toLowerCase().split(";")[0].trim();
   const inlineOk = inline && INLINE_SAFE_TYPES.has(mime);
   const headers = new Headers();
-  headers.set("content-type", inlineOk ? mime : inline ? "application/octet-stream" : row.mime || "application/octet-stream");
+  headers.set(
+    "content-type",
+    inlineOk ? mime : inline ? "application/octet-stream" : row.mime || "application/octet-stream",
+  );
   headers.set("content-length", String(bytes.byteLength));
   headers.set("cache-control", "private, max-age=3600");
   const dispo = inlineOk ? "inline" : "attachment";
@@ -784,6 +817,15 @@ export async function handleApi(request, env, ctx) {
     return json({ ok: true });
   }
 
+  if (path === "/api/alias-domains" && method === "GET") {
+    const set = await verifiedDomainSet(env);
+    const builtIn = String(env.MAIL_DOMAIN || "").toLowerCase();
+    const domains = [...set].sort((a, b) =>
+      a === builtIn ? -1 : b === builtIn ? 1 : a.localeCompare(b),
+    );
+    return json({ domains, builtIn });
+  }
+
   if (path === "/api/aliases" && method === "GET") {
     return json({ addresses: await listAddresses(env, user.id) });
   }
@@ -793,11 +835,16 @@ export async function handleApi(request, env, ctx) {
       .trim()
       .toLowerCase();
     if (!ALIAS_RE.test(localPart)) return error(400, "invalid alias (a-z, 0-9, . _ - ; up to 64)");
+    const domain = String(b.domain || env.MAIL_DOMAIN)
+      .trim()
+      .toLowerCase();
+    const allowed = await verifiedDomainSet(env);
+    if (!allowed.has(domain)) return error(400, "unknown or unverified domain");
     const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM addresses WHERE user_id = ?")
       .bind(user.id)
       .first();
     if ((count?.n || 0) >= ALIAS_LIMIT) return error(400, `alias limit reached (${ALIAS_LIMIT})`);
-    const address = `${localPart}@${env.MAIL_DOMAIN}`;
+    const address = `${localPart}@${domain}`;
     const taken = await env.DB.prepare("SELECT user_id FROM addresses WHERE address = ?")
       .bind(address)
       .first();
@@ -997,6 +1044,81 @@ export async function handleApi(request, env, ctx) {
       .run();
     const updated = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(user.id).first();
     return json({ user: publicUser(updated) });
+  }
+
+  if (path === "/api/domains" && method === "GET") {
+    if (!user.is_admin) return error(403, "admin only");
+    const res = await env.DB.prepare(
+      "SELECT id, domain, verified, created_at, added_by FROM domains ORDER BY created_at DESC",
+    ).all();
+    const custom = (res.results || []).map((r) => ({
+      id: r.id,
+      domain: r.domain,
+      verified: !!r.verified,
+      createdAt: r.created_at,
+      builtIn: false,
+    }));
+    const builtIn = {
+      id: "builtin",
+      domain: String(env.MAIL_DOMAIN || "").toLowerCase(),
+      verified: true,
+      createdAt: null,
+      builtIn: true,
+    };
+    return json({ domains: [builtIn, ...custom] });
+  }
+  if (path === "/api/domains" && method === "POST") {
+    if (!user.is_admin) return error(403, "admin only");
+    const b = await readJson(request);
+    const domain = String(b.domain || "")
+      .trim()
+      .toLowerCase();
+    if (!DOMAIN_RE.test(domain)) return error(400, "invalid domain");
+    if (domain === String(env.MAIL_DOMAIN || "").toLowerCase())
+      return error(409, "that is the built-in domain");
+    const exists = await env.DB.prepare("SELECT id FROM domains WHERE domain = ?")
+      .bind(domain)
+      .first();
+    if (exists) return error(409, "domain already added");
+    const id = uuid();
+    await env.DB.prepare(
+      "INSERT INTO domains (id, domain, verified, created_at, added_by) VALUES (?,?,0,?,?)",
+    )
+      .bind(id, domain, now(), user.id)
+      .run();
+    return json({ id, domain, verified: false, createdAt: now(), builtIn: false });
+  }
+  if ((m = path.match(/^\/api\/domains\/([\w-]+)\/verify$/)) && method === "POST") {
+    if (!user.is_admin) return error(403, "admin only");
+    const row = await env.DB.prepare("SELECT id, domain FROM domains WHERE id = ?")
+      .bind(m[1])
+      .first();
+    if (!row) return error(404, "not found");
+    let lookup;
+    try {
+      lookup = await lookupMx(row.domain);
+    } catch {
+      return error(502, "dns lookup failed, try again");
+    }
+    await env.DB.prepare("UPDATE domains SET verified = ? WHERE id = ?")
+      .bind(lookup.routesToCloudflare ? 1 : 0, row.id)
+      .run();
+    return json({
+      verified: lookup.routesToCloudflare,
+      records: lookup.records,
+    });
+  }
+  if ((m = path.match(/^\/api\/domains\/([\w-]+)$/)) && method === "DELETE") {
+    if (!user.is_admin) return error(403, "admin only");
+    const row = await env.DB.prepare("SELECT domain FROM domains WHERE id = ?").bind(m[1]).first();
+    if (!row) return error(404, "not found");
+    const inUse = await env.DB.prepare("SELECT COUNT(*) AS n FROM addresses WHERE address LIKE ?")
+      .bind(`%@${row.domain}`)
+      .first();
+    if ((inUse?.n || 0) > 0)
+      return error(409, `cannot remove: ${inUse.n} alias(es) still use this domain`);
+    await env.DB.prepare("DELETE FROM domains WHERE id = ?").bind(m[1]).run();
+    return json({ ok: true });
   }
 
   if (path === "/api/admin/users" && method === "GET") {

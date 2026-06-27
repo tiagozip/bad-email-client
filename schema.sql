@@ -128,6 +128,14 @@ CREATE TABLE IF NOT EXISTS filters (
 );
 CREATE INDEX IF NOT EXISTS idx_filters_user ON filters(user_id, position);
 
+CREATE TABLE IF NOT EXISTS domains (
+  id TEXT PRIMARY KEY,
+  domain TEXT UNIQUE NOT NULL,
+  verified INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  added_by TEXT
+);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
   mid UNINDEXED,
   uid UNINDEXED,

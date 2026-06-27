@@ -64,7 +64,8 @@ export const api = {
   },
   deleteAvatar: () => req("DELETE", "/api/avatar"),
   aliases: () => req("GET", "/api/aliases"),
-  addAlias: (localPart) => req("POST", "/api/aliases", { localPart }),
+  aliasDomains: () => req("GET", "/api/alias-domains"),
+  addAlias: (localPart, domain) => req("POST", "/api/aliases", { localPart, domain }),
   removeAlias: (address) => req("DELETE", `/api/aliases/${encodeURIComponent(address)}`),
   setPrimaryAddress: (address) => req("POST", "/api/aliases/primary", { address }),
 
@@ -94,4 +95,9 @@ export const api = {
   deleteApiKey: (id) => req("DELETE", `/api/keys/${id}`),
 
   adminUsers: () => req("GET", "/api/admin/users"),
+
+  domains: () => req("GET", "/api/domains"),
+  addDomain: (domain) => req("POST", "/api/domains", { domain }),
+  verifyDomain: (id) => req("POST", `/api/domains/${id}/verify`),
+  removeDomain: (id) => req("DELETE", `/api/domains/${id}`),
 };

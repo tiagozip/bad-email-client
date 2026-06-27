@@ -1689,6 +1689,72 @@ html[data-theme="sakura"] {
   align-items: center;
 }
 
+.em-alias-domain {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding-right: var(--em-2);
+  border-left: 1px solid var(--color-kumo-hairline);
+}
+
+.em-domain-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--em-3);
+  padding: var(--em-3) 0;
+  border-top: 1px solid var(--color-kumo-hairline);
+}
+
+.em-domain-row:first-child {
+  border-top: none;
+}
+
+.em-domain-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--em-2);
+}
+
+.em-domain-lookup {
+  flex-basis: 100%;
+  font-size: 0.8rem;
+  color: var(--text-color-kumo-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--em-1);
+}
+
+.em-domain-lookup ul {
+  margin: 0;
+  padding-left: var(--em-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.em-dns-steps {
+  margin-top: var(--em-4);
+  padding-top: var(--em-4);
+  border-top: 1px solid var(--color-kumo-hairline);
+  font-size: 0.84rem;
+  color: var(--text-color-kumo-subtle);
+}
+
+.em-dns-steps-title {
+  font-weight: 600;
+  color: var(--text-color-kumo-default);
+  margin-bottom: var(--em-2);
+}
+
+.em-dns-steps ol {
+  margin: 0;
+  padding-left: var(--em-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--em-2);
+}
+
 .em-compose-fields {
   display: flex;
   flex-direction: column;

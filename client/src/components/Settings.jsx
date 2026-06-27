@@ -165,6 +165,8 @@ function ApiKeys() {
 function Addresses({ user, setUser }) {
   const [addresses, setAddresses] = useState(user.addresses || null);
   const [localPart, setLocalPart] = useState("");
+  const [domains, setDomains] = useState([]);
+  const [domain, setDomain] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -173,6 +175,13 @@ function Addresses({ user, setUser }) {
       .aliases()
       .then((d) => setAddresses(d.addresses || []))
       .catch(notifyError);
+    api
+      .aliasDomains()
+      .then((d) => {
+        setDomains(d.domains || []);
+        setDomain(d.builtIn || (d.domains || [])[0] || "");
+      })
+      .catch(() => {});
   }, []);
 
   function refreshUser() {
@@ -189,7 +198,7 @@ function Addresses({ user, setUser }) {
     setBusy(true);
     setError("");
     try {
-      const res = await api.addAlias(lp);
+      const res = await api.addAlias(lp, domain);
       if (res.error) {
         setError(res.error);
         return;
@@ -272,7 +281,24 @@ function Addresses({ user, setUser }) {
               setError("");
             }}
           />
-          <span className="em-alias-suffix">@estrogen.delivery</span>
+          {domains.length > 1 ? (
+            <div className="em-alias-domain">
+              <Select
+                aria-label="Alias domain"
+                size="sm"
+                value={domain}
+                onValueChange={setDomain}
+              >
+                {domains.map((d) => (
+                  <Select.Option key={d} value={d}>
+                    @{d}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+          ) : (
+            <span className="em-alias-suffix">@{domain || "estrogen.delivery"}</span>
+          )}
         </div>
         <Button type="submit" variant="outline" icon={Plus} loading={busy}>
           Add
