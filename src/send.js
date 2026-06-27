@@ -1,7 +1,24 @@
+import * as openpgp from "openpgp";
 import { encryptText, tryDecryptBytes } from "./crypto.js";
 import { sanitizeEmailHtml, textToHtml } from "./sanitize.js";
 import { bumpContact, htmlKey, insertMessage, resolveThread, updateStorage } from "./store.js";
 import { isValidEmail, normalizeAddr, now, snippetFrom, uuid } from "./util.js";
+
+async function pgpEncryptToSelf(env, userId, content) {
+  const row = await env.DB.prepare("SELECT pgp_public_key FROM users WHERE id = ? AND pgp_enabled = 1")
+    .bind(userId)
+    .first();
+  if (!row?.pgp_public_key) return null;
+  try {
+    const key = await openpgp.readKey({ armoredKey: row.pgp_public_key });
+    return await openpgp.encrypt({
+      message: await openpgp.createMessage({ text: String(content ?? "") }),
+      encryptionKeys: key,
+    });
+  } catch {
+    return null;
+  }
+}
 
 function dayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -96,10 +113,12 @@ export async function sendMessage(env, user, payload) {
   const rfcId = `<${messageId}@${env.MAIL_DOMAIN}>`;
   const threadId = (await resolveThread(env, user.id, inReplyTo, refs)) || messageId;
 
+  const selfEncrypted = await pgpEncryptToSelf(env, user.id, html || text);
+  const storedBody = selfEncrypted || (html ? sanitizeEmailHtml(html, { allowRemote: true }) : "");
   let hKey = null;
-  if (html) {
+  if (storedBody) {
     hKey = htmlKey(user.id, messageId);
-    await env.R2.put(hKey, await encryptText(env, sanitizeEmailHtml(html, { allowRemote: true })), {
+    await env.R2.put(hKey, await encryptText(env, storedBody), {
       httpMetadata: { contentType: "text/html; charset=utf-8" },
     });
   }
@@ -118,8 +137,8 @@ export async function sendMessage(env, user, payload) {
     cc: cc.map((a) => ({ name: "", address: a })),
     bcc: bcc.map((a) => ({ name: "", address: a })),
     subject,
-    snippet: snippetFrom(text || html.replace(/<[^>]+>/g, " ")),
-    body_text: text,
+    snippet: selfEncrypted ? "PGP encrypted message" : snippetFrom(text || html.replace(/<[^>]+>/g, " ")),
+    body_text: selfEncrypted ? "" : text,
     has_html: html ? 1 : 0,
     date: now(),
     received_at: now(),
@@ -127,6 +146,7 @@ export async function sendMessage(env, user, payload) {
     has_attachments: attRows.length ? 1 : 0,
     size: text.length + html.length,
     html_key: hKey,
+    pgp: selfEncrypted ? 1 : 0,
   });
 
   let attBytes = 0;

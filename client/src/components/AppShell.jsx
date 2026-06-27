@@ -1,3 +1,5 @@
+import { Button } from "@cloudflare/kumo";
+import { Lock, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 import * as pgp from "../pgp.js";
@@ -29,6 +31,7 @@ export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }
   const [composeInitial, setComposeInitial] = useState(null);
   const [screen, setScreen] = useState("mail");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showNudge, setShowNudge] = useState(() => localStorage.getItem("em-pgp-nudge") !== "1");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [cursor, setCursor] = useState(-1);
@@ -200,6 +203,28 @@ export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }
       ) : (
         <div className="em-main">
           <div className="em-column">
+            {!readerOpen && !user.pgpEnabled && showNudge && (
+              <div className="em-pgp-nudge">
+                <Lock size={16} weight="fill" />
+                <span className="em-pgp-nudge-text">
+                  Turn on end-to-end encryption so only you can read your mail.
+                </span>
+                <Button size="sm" variant="primary" onClick={() => setSettingsOpen(true)}>
+                  Enable
+                </Button>
+                <button
+                  type="button"
+                  className="em-pgp-nudge-x"
+                  aria-label="Dismiss"
+                  onClick={() => {
+                    localStorage.setItem("em-pgp-nudge", "1");
+                    setShowNudge(false);
+                  }}
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            )}
             {readerOpen ? (
               <ThreadView
                 key="reader"
