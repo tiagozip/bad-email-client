@@ -95,17 +95,22 @@ export async function sendMessage(env, user, payload) {
     if (refs.length) headers.References = refs.slice(-20).join(" ");
   }
 
+  const isE2E = payload.pgp === true && text.includes("-----BEGIN PGP MESSAGE-----");
   const sendPayload = {
     to,
     from: { email: fromAddr, name: user.display_name || user.username },
     subject,
-    text: text + signature,
-    html,
   };
+  if (isE2E) {
+    sendPayload.text = text;
+  } else {
+    sendPayload.text = text + signature;
+    sendPayload.html = html;
+  }
   if (cc.length) sendPayload.cc = cc;
   if (bcc.length) sendPayload.bcc = bcc;
   if (Object.keys(headers).length) sendPayload.headers = headers;
-  if (attachments.length) sendPayload.attachments = attachments;
+  if (attachments.length && !isE2E) sendPayload.attachments = attachments;
 
   const result = await env.EMAIL.send(sendPayload);
 
@@ -113,8 +118,13 @@ export async function sendMessage(env, user, payload) {
   const rfcId = `<${messageId}@${env.MAIL_DOMAIN}>`;
   const threadId = (await resolveThread(env, user.id, inReplyTo, refs)) || messageId;
 
-  const selfEncrypted = await pgpEncryptToSelf(env, user.id, html || text);
-  const storedBody = selfEncrypted || (html ? sanitizeEmailHtml(html, { allowRemote: true }) : "");
+  const selfEncrypted = isE2E ? text : await pgpEncryptToSelf(env, user.id, html || text);
+  const storedPgp = isE2E || !!selfEncrypted;
+  const storedBody = storedPgp
+    ? selfEncrypted
+    : html
+      ? sanitizeEmailHtml(html, { allowRemote: true })
+      : "";
   let hKey = null;
   if (storedBody) {
     hKey = htmlKey(user.id, messageId);
@@ -137,16 +147,16 @@ export async function sendMessage(env, user, payload) {
     cc: cc.map((a) => ({ name: "", address: a })),
     bcc: bcc.map((a) => ({ name: "", address: a })),
     subject,
-    snippet: selfEncrypted ? "PGP encrypted message" : snippetFrom(text || html.replace(/<[^>]+>/g, " ")),
-    body_text: selfEncrypted ? "" : text,
-    has_html: html ? 1 : 0,
+    snippet: storedPgp ? "PGP encrypted message" : snippetFrom(text || html.replace(/<[^>]+>/g, " ")),
+    body_text: storedPgp ? "" : text,
+    has_html: isE2E ? 0 : html ? 1 : 0,
     date: now(),
     received_at: now(),
     is_read: 1,
     has_attachments: attRows.length ? 1 : 0,
     size: text.length + html.length,
     html_key: hKey,
-    pgp: selfEncrypted ? 1 : 0,
+    pgp: storedPgp ? 1 : 0,
   });
 
   let attBytes = 0;
