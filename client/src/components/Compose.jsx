@@ -16,7 +16,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api.js";
 import * as pgp from "../pgp.js";
 import { notify, notifyError } from "../toast.js";
-import { humanSize, parseRecipients, plainBodyToHtml } from "../util.js";
+import { humanSize, initials, monoColor, parseRecipients, plainBodyToHtml } from "../util.js";
 import { RichEditor } from "./RichEditor.jsx";
 
 function attIcon(mime) {
@@ -32,34 +32,63 @@ function attIcon(mime) {
 function RecipientField({ label, value, onChange, autoFocus }) {
   const [suggestions, setSuggestions] = useState([]);
   const [show, setShow] = useState(false);
+  const [active, setActive] = useState(0);
   const timer = useRef(null);
+  const listRef = useRef(null);
 
   function onInput(v) {
     onChange(v);
     const last = v.split(/[,\s]+/).pop();
     clearTimeout(timer.current);
-    if (!last || last.length < 2) {
+    if (!last || last.length < 1) {
       setSuggestions([]);
+      setShow(false);
       return;
     }
     timer.current = setTimeout(async () => {
       try {
         const d = await api.contacts(last);
-        setSuggestions(d.contacts || []);
-        setShow(true);
+        const list = d.contacts || [];
+        setSuggestions(list);
+        setActive(0);
+        setShow(list.length > 0);
       } catch {
         setSuggestions([]);
+        setShow(false);
       }
-    }, 200);
+    }, 150);
   }
 
-  function pick(addr) {
+  function pick(c) {
     const parts = value.split(/[,\s]+/);
-    parts[parts.length - 1] = addr;
+    parts[parts.length - 1] = c.address;
     onChange(`${parts.join(", ")}, `);
     setShow(false);
     setSuggestions([]);
   }
+
+  function onKeyDown(e) {
+    if (!show || !suggestions.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActive((i) => (i + 1) % suggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((i) => (i - 1 + suggestions.length) % suggestions.length);
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (suggestions[active]) {
+        e.preventDefault();
+        pick(suggestions[active]);
+      }
+    } else if (e.key === "Escape") {
+      setShow(false);
+    }
+  }
+
+  useEffect(() => {
+    const el = listRef.current?.children?.[active];
+    el?.scrollIntoView({ block: "nearest" });
+  }, [active]);
 
   return (
     <div className="em-recip-row">
@@ -70,15 +99,33 @@ function RecipientField({ label, value, onChange, autoFocus }) {
           autoFocus={autoFocus}
           value={value}
           onChange={(e) => onInput(e.target.value)}
+          onKeyDown={onKeyDown}
           onFocus={() => suggestions.length && setShow(true)}
           onBlur={() => setTimeout(() => setShow(false), 150)}
         />
         {show && suggestions.length > 0 && (
-          <div className="em-suggest">
-            {suggestions.map((c) => (
-              <div key={c.address} className="em-suggest-item" onMouseDown={() => pick(c.address)}>
-                {c.name ? `${c.name} ` : ""}
-                <span className="em-suggest-addr">{c.address}</span>
+          <div className="em-suggest" ref={listRef}>
+            {suggestions.map((c, i) => (
+              <div
+                key={c.address}
+                className={`em-suggest-item${i === active ? " is-active" : ""}`}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  pick(c);
+                }}
+                onMouseEnter={() => setActive(i)}
+              >
+                {c.avatar ? (
+                  <img className="em-suggest-avatar" src={c.avatar} alt="" />
+                ) : (
+                  <span className="em-suggest-avatar em-suggest-mono" style={{ background: monoColor(c.address) }}>
+                    {initials({ name: c.name, address: c.address })}
+                  </span>
+                )}
+                <span className="em-suggest-text">
+                  {c.name && <span className="em-suggest-name">{c.name}</span>}
+                  <span className="em-suggest-addr">{c.address}</span>
+                </span>
               </div>
             ))}
           </div>

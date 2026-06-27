@@ -1763,23 +1763,57 @@ html[data-theme="sakura"] {
 }
 
 .em-suggest-item {
-  padding: 7px var(--em-2);
+  padding: 6px var(--em-2);
   border-radius: var(--em-radius-sm);
   cursor: pointer;
   font-size: 0.84rem;
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  align-items: center;
+  gap: var(--em-2);
   transition: background var(--em-fast);
 }
 
-.em-suggest-item:hover {
+.em-suggest-item.is-active {
   background: var(--color-kumo-fill-hover);
+}
+
+.em-suggest-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  flex: none;
+  object-fit: cover;
+}
+
+.em-suggest-mono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 600;
+}
+
+.em-suggest-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.em-suggest-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .em-suggest-addr {
   color: var(--text-color-kumo-subtle);
   font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .em-compose-subject {
@@ -2306,6 +2340,56 @@ html[data-theme="sakura"] {
   font-size: 0.84rem;
   color: var(--text-color-kumo-subtle);
   padding: var(--em-2) 0;
+}
+
+.em-filter-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--em-1);
+  margin-bottom: var(--em-3);
+}
+
+.em-filter-row {
+  display: flex;
+  align-items: center;
+  gap: var(--em-2);
+  padding: var(--em-2) var(--em-3);
+  border: 1px solid var(--color-kumo-hairline);
+  border-radius: var(--em-radius);
+}
+
+.em-filter-rule {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.84rem;
+  color: var(--text-color-kumo-subtle);
+}
+
+.em-filter-rule strong {
+  color: var(--text-color-kumo-base);
+  font-weight: 600;
+}
+
+.em-filter-needle {
+  font-family: var(--em-mono, ui-monospace, monospace);
+  color: var(--text-color-kumo-brand);
+}
+
+.em-filter-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--em-2);
+}
+
+.em-filter-add .kumo-input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.em-filter-lead {
+  font-size: 0.84rem;
+  color: var(--text-color-kumo-subtle);
 }
 
 .em-keys-revoke {
