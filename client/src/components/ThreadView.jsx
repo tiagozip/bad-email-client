@@ -123,7 +123,7 @@ function PgpLock({ onUnlocked }) {
       </div>
       <label className="em-pgp-remember">
         <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-        <span>Remember on this device (auto-decrypt, less secure)</span>
+        <span>Remember on this device</span>
       </label>
       {error && <div className="em-form-error">{error}</div>}
     </form>
