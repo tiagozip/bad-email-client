@@ -2,17 +2,49 @@ import { handleApi } from "./api.js";
 import { handleEmail } from "./mail.js";
 import { error } from "./util.js";
 
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com data:",
+  "img-src 'self' data: https:",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+
+const SECURITY_HEADERS = {
+  "content-security-policy": CSP,
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "strict-origin-when-cross-origin",
+  "x-frame-options": "DENY",
+  "cross-origin-opener-policy": "same-origin",
+};
+
+function harden(res) {
+  const headers = new Headers(res.headers);
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) headers.set(k, v);
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/api/")) {
+      let res;
       try {
-        return await handleApi(request, env, ctx);
+        res = await handleApi(request, env, ctx);
       } catch (e) {
-        return error(500, "internal error", { detail: String(e?.message || e) });
+        console.error("api error", e?.stack || e);
+        res = error(500, "internal error");
       }
+      return harden(res);
     }
-    return env.ASSETS.fetch(request);
+    const res = await env.ASSETS.fetch(request);
+    if ((request.headers.get("accept") || "").includes("text/html")) return harden(res);
+    return res;
   },
 
   async email(message, env, ctx) {

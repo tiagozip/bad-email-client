@@ -82,6 +82,6 @@ export function requireOrigin(request) {
     }
   }
   const site = request.headers.get("sec-fetch-site");
-  if (site) return site === "same-origin" || site === "none";
+  if (site) return site === "same-origin";
   return false;
 }
