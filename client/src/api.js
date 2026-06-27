@@ -76,6 +76,11 @@ export const api = {
   createLabel: (name, color) => req("POST", "/api/labels", { name, color }),
   deleteLabel: (id) => req("DELETE", `/api/labels/${id}`),
   contacts: (q) => req("GET", `/api/contacts?q=${encodeURIComponent(q || "")}`),
+  emlUrl: (id) => `/api/messages/${id}/raw`,
+
+  filters: () => req("GET", "/api/filters"),
+  createFilter: (payload) => req("POST", "/api/filters", payload),
+  deleteFilter: (id) => req("DELETE", `/api/filters/${id}`),
 
   saveSettings: (payload) => req("PUT", "/api/settings", payload),
 

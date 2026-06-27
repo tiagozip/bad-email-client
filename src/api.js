@@ -549,6 +549,29 @@ export async function handleApi(request, env, ctx) {
     }
   }
 
+  if ((m = path.match(/^\/api\/messages\/([\w-]+)\/raw$/)) && method === "GET") {
+    const row = await env.DB.prepare(
+      "SELECT raw_key, subject FROM messages WHERE id = ? AND user_id = ?",
+    )
+      .bind(m[1], user.id)
+      .first();
+    if (!row?.raw_key) return error(404, "no source available");
+    const obj = await env.R2.get(row.raw_key);
+    if (!obj) return error(404, "not found");
+    const bytes = await tryDecryptBytes(env, await obj.arrayBuffer());
+    const safeName =
+      String(row.subject || "message")
+        .replace(/[^\w.\- ]+/g, "_")
+        .trim()
+        .slice(0, 80) || "message";
+    const headers = new Headers();
+    headers.set("content-type", "message/rfc822");
+    headers.set("content-length", String(bytes.byteLength));
+    headers.set("content-disposition", `attachment; filename="${safeName}.eml"`);
+    headers.set("cache-control", "private, no-store");
+    return new Response(bytes, { headers });
+  }
+
   if ((m = path.match(/^\/api\/messages\/([\w-]+)\/read$/)) && method === "POST") {
     const b = await readJson(request);
     await markRead(env, user, [m[1]], b.read !== false);
