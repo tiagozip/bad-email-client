@@ -53,7 +53,7 @@ class ThreadViewModel(private val repository: MailRepository) : ViewModel() {
                         )
                     }
                     resolved.lastOrNull()?.takeIf { !it.isRead }?.let { markRead(it.id) }
-                    repository.pgp.tryAutoUnlock()
+                    withContext(Dispatchers.Default) { repository.pgp.tryAutoUnlock() }
                     _state.update { it.copy(pgpStatus = repository.pgp.status.value) }
                     lastId?.let { decryptIfNeeded(it) }
                 },

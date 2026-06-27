@@ -42,8 +42,8 @@ class SettingsViewModel(
 
     init {
         viewModelScope.launch {
-            val creds = repository.credentials.first()
-            val dynamic = repository.dynamicColor.first()
+            val creds = runCatching { repository.credentials.first() }.getOrNull()
+            val dynamic = runCatching { repository.dynamicColor.first() }.getOrDefault(true)
             _state.update {
                 it.copy(
                     baseUrl = creds?.baseUrl ?: "",
@@ -61,7 +61,7 @@ class SettingsViewModel(
                     )
                 }
             }
-            repository.pgp.tryAutoUnlock()
+            withContext(Dispatchers.Default) { repository.pgp.tryAutoUnlock() }
             _state.update { it.copy(pgpStatus = repository.pgp.status.value) }
         }
     }

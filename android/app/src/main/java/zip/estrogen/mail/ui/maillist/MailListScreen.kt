@@ -98,15 +98,15 @@ fun MailListScreen(
                 selected = state.folder,
                 onSelect = { folder ->
                     scope.launch { drawerState.close() }
-                    viewModel.selectFolder(folder)
+                    runCatching { viewModel.selectFolder(folder) }
                 },
                 onOpenSettings = {
                     scope.launch { drawerState.close() }
-                    onOpenSettings()
+                    runCatching { onOpenSettings() }
                 },
                 onSignOut = {
                     scope.launch { drawerState.close() }
-                    viewModel.signOut()
+                    runCatching { viewModel.signOut() }
                 }
             )
         }

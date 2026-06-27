@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
-import kotlin.math.absoluteValue
 
 private val avatarPalette = listOf(
     Color(0xFFBF3264),
@@ -39,7 +38,7 @@ fun Avatar(
     val initial = (label?.firstOrNull { it.isLetterOrDigit() } ?: seed.firstOrNull { it.isLetterOrDigit() } ?: '?')
         .uppercaseChar()
         .toString()
-    val bg = avatarPalette[(seed.hashCode().absoluteValue) % avatarPalette.size]
+    val bg = avatarPalette[Math.floorMod(seed.hashCode(), avatarPalette.size)]
 
     Box(
         modifier = modifier.size(size).clip(CircleShape),

@@ -2,6 +2,7 @@ package zip.estrogen.mail.nav
 
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -26,9 +27,20 @@ object Routes {
 }
 
 @Composable
-fun AppNavHost(hasCredentials: Boolean) {
+fun AppNavHost(
+    hasCredentials: Boolean,
+    composeRequested: Boolean = false,
+    onComposeConsumed: () -> Unit = {}
+) {
     val navController = rememberNavController()
     val start = if (hasCredentials) Routes.MAIL_LIST else Routes.SETUP
+
+    LaunchedEffect(composeRequested, hasCredentials) {
+        if (composeRequested && hasCredentials) {
+            runCatching { navController.navigate(Routes.COMPOSE) }
+            onComposeConsumed()
+        }
+    }
 
     NavHost(navController = navController, startDestination = start) {
 

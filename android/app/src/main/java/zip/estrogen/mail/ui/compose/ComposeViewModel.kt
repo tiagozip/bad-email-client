@@ -50,7 +50,7 @@ class ComposeViewModel(private val repository: MailRepository) : ViewModel() {
                         pgpAvailable = me.user.pgpEnabled && repository.pgp.hasPrivateKey
                     )
                 }
-                repository.pgp.tryAutoUnlock()
+                withContext(Dispatchers.Default) { repository.pgp.tryAutoUnlock() }
             }
         }
 
@@ -139,13 +139,18 @@ class ComposeViewModel(private val repository: MailRepository) : ViewModel() {
     }
 
     private fun sendEncrypted(s: ComposeState, recipients: List<String>) {
-        if (!repository.pgp.tryAutoUnlock() && repository.pgp.status.value != PgpStatus.UNLOCKED) {
-            _state.update { it.copy(error = "Unlock your PGP key in Settings before sending encrypted mail") }
-            return
-        }
         val allRecipients = recipients + parseAddresses(s.cc)
         _state.update { it.copy(sending = true, error = null) }
         viewModelScope.launch {
+            val unlocked = withContext(Dispatchers.Default) {
+                repository.pgp.status.value == PgpStatus.UNLOCKED || repository.pgp.tryAutoUnlock()
+            }
+            if (!unlocked) {
+                _state.update {
+                    it.copy(sending = false, error = "Unlock your PGP key in Settings before sending encrypted mail")
+                }
+                return@launch
+            }
             val keys = mutableListOf<String>()
             val missing = mutableListOf<String>()
             for (addr in allRecipients) {

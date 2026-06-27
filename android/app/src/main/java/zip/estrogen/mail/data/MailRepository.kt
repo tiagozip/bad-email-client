@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import zip.estrogen.mail.data.model.FoldersResponse
 import zip.estrogen.mail.data.model.FullMessage
@@ -26,6 +27,10 @@ class MailRepository(
 
     val credentials: Flow<Credentials?> = settings.credentials
     val dynamicColor: Flow<Boolean> = settings.dynamicColor
+
+    val authState: Flow<AuthState> = settings.credentials.map { creds ->
+        if (creds == null) AuthState.SignedOut else AuthState.SignedIn
+    }
 
     private var cachedApi: MailApi? = null
     private var cachedFor: String? = null
