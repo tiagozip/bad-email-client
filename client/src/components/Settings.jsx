@@ -10,6 +10,7 @@ import {
   Switch,
 } from "@cloudflare/kumo";
 import {
+  Bell,
   Camera,
   Check,
   Code,
@@ -583,9 +584,132 @@ function Filters() {
   );
 }
 
+function urlBase64ToUint8Array(base64) {
+  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+  const normalized = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(normalized);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+function Notifications() {
+  const supported =
+    typeof window !== "undefined" &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    "Notification" in window;
+  const [enabled, setEnabled] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (!supported) return;
+    (async () => {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        const sub = await reg?.pushManager?.getSubscription();
+        setEnabled(!!sub && Notification.permission === "granted");
+      } catch {}
+    })();
+  }, [supported]);
+
+  async function enable() {
+    setBusy(true);
+    setMessage("");
+    try {
+      const reg = await navigator.serviceWorker.register("/sw.js");
+      await navigator.serviceWorker.ready;
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setMessage(
+          permission === "denied"
+            ? "Notifications are blocked. Allow them in your browser site settings, then try again."
+            : "Permission was not granted.",
+        );
+        return;
+      }
+      const { key } = await api.pushKey();
+      if (!key) {
+        setMessage("Push is not configured on the server.");
+        return;
+      }
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(key),
+      });
+      const json = sub.toJSON();
+      await api.pushSubscribe({
+        endpoint: json.endpoint,
+        keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+      });
+      setEnabled(true);
+      notify("Notifications on", "You'll get a browser alert when new mail arrives.", "success");
+    } catch (err) {
+      setMessage(err.message || "Could not enable notifications.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function disable() {
+    setBusy(true);
+    setMessage("");
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      const sub = await reg?.pushManager?.getSubscription();
+      if (sub) {
+        await api.pushUnsubscribe(sub.endpoint).catch(() => {});
+        await sub.unsubscribe().catch(() => {});
+      }
+      setEnabled(false);
+    } catch (err) {
+      setMessage(err.message || "Could not disable notifications.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="em-card">
+      <div className="em-card-head">
+        <h2 className="em-card-title">Notifications</h2>
+        <p className="em-card-sub">
+          Get a browser notification when new mail arrives, even when this tab is closed. Works per
+          device and browser.
+        </p>
+      </div>
+      {!supported ? (
+        <div className="em-keys-empty">This browser does not support web push notifications.</div>
+      ) : (
+        <div className="em-toggle-row">
+          <div className="em-toggle-copy">
+            <div className="em-toggle-title">New mail notifications</div>
+            <div className="em-toggle-sub">
+              Spam is never notified. On iOS, add this site to your home screen first.
+            </div>
+          </div>
+          <Switch
+            aria-label="New mail notifications"
+            checked={enabled}
+            disabled={busy}
+            onCheckedChange={(v) => (v ? enable() : disable())}
+          />
+        </div>
+      )}
+      {message && (
+        <div className="em-form-error" style={{ marginTop: 8 }}>
+          {message}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const SECTIONS = [
   { id: "account", label: "Account", icon: User },
   { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "notifications", label: "Notifications", icon: Bell },
   { id: "filters", label: "Filters", icon: Funnel },
   { id: "encryption", label: "Encryption", icon: LockKey },
   { id: "developer", label: "Developer", icon: Code },

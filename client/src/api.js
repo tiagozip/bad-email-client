@@ -85,6 +85,10 @@ export const api = {
 
   saveSettings: (payload) => req("PUT", "/api/settings", payload),
 
+  pushKey: () => req("GET", "/api/push/key"),
+  pushSubscribe: (sub) => req("POST", "/api/push/subscribe", sub),
+  pushUnsubscribe: (endpoint) => req("POST", "/api/push/unsubscribe", { endpoint }),
+
   getPgp: () => req("GET", "/api/pgp"),
   enablePgp: (publicKey, privateKeyEnc) => req("POST", "/api/pgp/enable", { publicKey, privateKeyEnc }),
   disablePgp: () => req("DELETE", "/api/pgp"),

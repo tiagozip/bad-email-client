@@ -31,6 +31,8 @@
     "DAILY_SEND_LIMIT": "200",
     "OIDC_ISSUER": "https://id.estrogen.delivery",
     "OIDC_CLIENT_ID": "B8tyYp6lRL6jU671t7iaEw",
-    "ADMIN_GROUP": "mail-admins"
+    "ADMIN_GROUP": "mail-admins",
+    "VAPID_PUBLIC_KEY": "BA0K8yMwdipJt4UJgyt8x6BHTj40Ak3yz0xTBvSI8Kt5N5FKfenVH0f6bNKP5TvMcxPZxdJW-YCcSZrasVUIIzY",
+    "VAPID_SUBJECT": "mailto:hi@tiago.zip"
   }
 }

@@ -1,6 +1,7 @@
 import * as openpgp from "openpgp";
 import PostalMime from "postal-mime";
 import { encryptBytes, encryptText } from "./crypto.js";
+import { sendPush } from "./push.js";
 import { sanitizeEmailHtml } from "./sanitize.js";
 import {
   applyFilters,
@@ -281,4 +282,14 @@ export async function handleEmail(message, env, ctx) {
 
   await updateStorage(env, userId, used - (user?.storage_used || 0));
   ctx.waitUntil(bumpContact(env, userId, fromAddr, fromName));
+
+  if (folder !== "spam") {
+    ctx.waitUntil(
+      sendPush(env, userId, {
+        title: fromName || fromAddr,
+        body: parsed.subject || "(no subject)",
+        url: "/",
+      }),
+    );
+  }
 }
