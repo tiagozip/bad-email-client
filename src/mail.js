@@ -26,13 +26,35 @@ function refsToList(value) {
   return String(value).split(/\s+/).filter(Boolean);
 }
 
-function evaluateAuth(message) {
-  const ar = (message.headers.get("authentication-results") || "").toLowerCase();
+function firstHeader(rawHeaders, name) {
+  const lower = name.toLowerCase();
+  const lines = String(rawHeaders || "").split(/\r?\n/);
+  let value = null;
+  let collecting = false;
+  for (const line of lines) {
+    if (collecting) {
+      if (/^[ \t]/.test(line)) {
+        value += ` ${line.trim()}`;
+        continue;
+      }
+      break;
+    }
+    const idx = line.indexOf(":");
+    if (idx > 0 && line.slice(0, idx).trim().toLowerCase() === lower) {
+      value = line.slice(idx + 1).trim();
+      collecting = true;
+    }
+  }
+  return value;
+}
+
+function evaluateAuth(rawHeaders) {
+  const ar = (firstHeader(rawHeaders, "authentication-results") || "").toLowerCase();
   const grab = (re) => (ar.match(re) || [])[1] || null;
   const spf =
     grab(/[^-]spf=(\w+)/) ||
     grab(/^spf=(\w+)/) ||
-    ((message.headers.get("received-spf") || "").toLowerCase().match(/^\s*(\w+)/) || [])[1] ||
+    ((firstHeader(rawHeaders, "received-spf") || "").toLowerCase().match(/^\s*(\w+)/) || [])[1] ||
     null;
   const dkim = grab(/dkim=(\w+)/);
   const dmarc = grab(/dmarc=(\w+)/);
@@ -175,7 +197,9 @@ export async function handleEmail(message, env, ctx) {
   const fromName = parsed.from?.name || "";
   const date = parsed.date ? new Date(parsed.date).getTime() || now() : now();
 
-  const auth = evaluateAuth(message);
+  const headerSep = rawText.search(/\r?\n\r?\n/);
+  const headerBlock = headerSep === -1 ? rawText : rawText.slice(0, headerSep);
+  const auth = evaluateAuth(headerBlock);
   const spoofed = auth.status === "fail";
   let folder = spoofed ? "spam" : "inbox";
   console.log("inbound auth", fromAddr, "->", JSON.stringify(auth), spoofed ? "SPOOFED->spam" : "");

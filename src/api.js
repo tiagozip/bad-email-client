@@ -145,15 +145,10 @@ async function oidcCallback(request, env) {
       redirectUri: flow.redirectUri,
       verifier: flow.verifier,
     });
-    let verified = null;
-    try {
-      verified = await verifyIdToken(env, tokens.id_token, flow.nonce);
-    } catch (e) {
-      console.warn("id_token verification failed, falling back to userinfo:", e?.message);
-    }
+    const verified = await verifyIdToken(env, tokens.id_token, flow.nonce);
     const claims = await userInfo(env, tokens.access_token);
-    if (verified && String(claims.sub) !== String(verified.sub)) throw new Error("sub mismatch");
-    const user = await upsertOidcUser(env, claims);
+    if (String(claims.sub) !== String(verified.sub)) throw new Error("sub mismatch");
+    const user = await upsertOidcUser(env, { ...claims, sub: verified.sub });
     const token = await createSession(env, user.id, { idToken: tokens.id_token || null });
     return redirectTo(home, { "set-cookie": sessionCookie(token, isSecure(request)) });
   } catch (e) {
