@@ -116,13 +116,6 @@ function BulkBar({ store }) {
   );
 }
 
-function listTitle(view, labels) {
-  if (view.kind === "search") return `Search: ${view.q}`;
-  if (view.kind === "starred") return "Starred";
-  if (view.kind === "label") return view.name || labels.find((l) => l.id === view.labelId)?.name || "Label";
-  return FOLDER_LABELS[view.folder] || "Inbox";
-}
-
 export function MessageList({ store, searchRef, onMenu, onCompose }) {
   const {
     view,
@@ -196,7 +189,6 @@ export function MessageList({ store, searchRef, onMenu, onCompose }) {
 
   const selecting = selectedIds.size > 0;
   const allSelected = threads.length > 0 && threads.every((t) => selectedIds.has(t.id));
-  const unread = threads.filter((t) => !t.isRead).length;
 
   function toggleSelectAll(on) {
     if (!on) {
@@ -220,10 +212,6 @@ export function MessageList({ store, searchRef, onMenu, onCompose }) {
           icon={List}
           onClick={onMenu}
         />
-        <div className="em-pane-title">
-          <span className="em-pane-title-text">{listTitle(view, labels)}</span>
-          {unread > 0 && <span className="em-pane-title-count">{unread} unread</span>}
-        </div>
       </div>
 
       {selecting ? (
@@ -247,10 +235,14 @@ export function MessageList({ store, searchRef, onMenu, onCompose }) {
       <div className="em-list-scroll" ref={scrollRef} onScroll={onScroll}>
         {listLoading ? (
           <div className="em-skel">
-            {Array.from({ length: 9 }).map((_, i) => (
+            {Array.from({ length: 7 }).map((_, i) => (
               <div key={i} className="em-skel-row">
-                <SkeletonLine style={{ width: "55%" }} />
-                <SkeletonLine style={{ width: "85%" }} />
+                <div className="em-skel-avatar" />
+                <div className="em-skel-lines">
+                  <SkeletonLine style={{ width: "38%" }} />
+                  <SkeletonLine style={{ width: "62%" }} />
+                  <SkeletonLine style={{ width: "85%" }} />
+                </div>
               </div>
             ))}
           </div>
