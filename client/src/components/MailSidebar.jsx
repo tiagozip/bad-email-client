@@ -138,7 +138,6 @@ export function MailSidebar({
                 )}
                 <span className="em-account-meta">
                   <span className="em-account-name">{user.displayName || user.username}</span>
-                  <span className="em-account-addr">{user.address}</span>
                 </span>
                 <CaretUpDown className="em-account-caret" size={15} />
               </button>

@@ -308,6 +308,36 @@ html[data-theme="sakura"] {
   display: flex;
   flex-direction: column;
   position: relative;
+  view-transition-name: em-column;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+
+  ::view-transition-old(em-column) {
+    animation: em-vt-out 180ms var(--em-ease) both;
+  }
+
+  ::view-transition-new(em-column) {
+    animation: em-vt-in 260ms var(--em-ease) both;
+  }
+}
+
+@keyframes em-vt-out {
+  to {
+    opacity: 0;
+    transform: scale(0.99);
+  }
+}
+
+@keyframes em-vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
 }
 
 .em-pane {

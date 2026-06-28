@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { api } from "./api.js";
 import { notifyError } from "./toast.js";
+
+function runViewTransition(apply) {
+  if (typeof document === "undefined" || !document.startViewTransition) {
+    apply();
+    return;
+  }
+  document.startViewTransition(() => flushSync(apply));
+}
 
 export function useMailStore(initialUser) {
   const [user, setUser] = useState(initialUser);
@@ -100,9 +109,23 @@ export function useMailStore(initialUser) {
 
   const openMessage = useCallback(
     (item) => {
-      setOpenId(item.id);
-      setThreadLoading(true);
-      setThread(null);
+      runViewTransition(() => {
+        setOpenId(item.id);
+        setThreadLoading(true);
+        setThread(null);
+        if (!item.isRead) {
+          setMessages((prev) => prev.map((m) => (m.id === item.id ? { ...m, isRead: true } : m)));
+          setCounts((c) => {
+            if (!c) return c;
+            const folder = item.folder;
+            if (!c[folder]) return c;
+            return {
+              ...c,
+              [folder]: { ...c[folder], unread: Math.max(0, (c[folder].unread || 0) - 1) },
+            };
+          });
+        }
+      });
       api
         .thread(item.threadId)
         .then((d) => {
@@ -114,25 +137,15 @@ export function useMailStore(initialUser) {
         })
         .catch(notifyError)
         .finally(() => setThreadLoading(false));
-      if (!item.isRead) {
-        setMessages((prev) => prev.map((m) => (m.id === item.id ? { ...m, isRead: true } : m)));
-        setCounts((c) => {
-          if (!c) return c;
-          const folder = item.folder;
-          if (!c[folder]) return c;
-          return {
-            ...c,
-            [folder]: { ...c[folder], unread: Math.max(0, (c[folder].unread || 0) - 1) },
-          };
-        });
-      }
     },
     [refreshCounts],
   );
 
   const closeMessage = useCallback(() => {
-    setOpenId(null);
-    setThread(null);
+    runViewTransition(() => {
+      setOpenId(null);
+      setThread(null);
+    });
   }, []);
 
   const reloadThread = useCallback(
