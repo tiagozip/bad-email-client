@@ -3,6 +3,66 @@ import { now, snippetFrom, uuid } from "./util.js";
 export const FOLDERS = ["inbox", "sent", "drafts", "archive", "trash", "spam"];
 export const FILTER_FIELDS = ["from", "to", "subject"];
 export const FILTER_ACTIONS = ["read", "archive", "star", "spam"];
+export const LABEL_RULE_FIELDS = ["from", "to", "subject", "body"];
+export const LABEL_RULE_OPS = ["contains", "is", "startsWith"];
+
+export function validateLabelRule(rule) {
+  if (!rule || typeof rule !== "object") return null;
+  const match = rule.match === "any" ? "any" : "all";
+  const conditions = [];
+  for (const c of Array.isArray(rule.conditions) ? rule.conditions : []) {
+    if (!c || typeof c !== "object") return false;
+    if (!LABEL_RULE_FIELDS.includes(c.field)) return false;
+    if (!LABEL_RULE_OPS.includes(c.op)) return false;
+    const value = String(c.value ?? "").trim();
+    if (!value) return false;
+    conditions.push({ field: c.field, op: c.op, value: value.slice(0, 500) });
+    if (conditions.length > 10) return false;
+  }
+  if (conditions.length === 0) return null;
+  return { match, conditions };
+}
+
+function matchOp(op, hay, needle) {
+  if (op === "is") return hay === needle;
+  if (op === "startsWith") return hay.startsWith(needle);
+  return hay.includes(needle);
+}
+
+export function labelsForMessage(labels, msg) {
+  const fields = {
+    from: `${msg.fromName || ""} ${msg.fromAddr || ""}`.trim().toLowerCase(),
+    to: String(msg.to || "")
+      .trim()
+      .toLowerCase(),
+    subject: String(msg.subject || "")
+      .trim()
+      .toLowerCase(),
+    body: String(msg.body || "")
+      .trim()
+      .toLowerCase(),
+  };
+  const out = [];
+  for (const label of labels || []) {
+    let rule = label.rule;
+    if (rule == null && typeof label.rule_json === "string") {
+      try {
+        rule = JSON.parse(label.rule_json);
+      } catch {
+        rule = null;
+      }
+    }
+    const conditions = Array.isArray(rule?.conditions) ? rule.conditions : [];
+    if (conditions.length === 0) continue;
+    const match = rule.match === "any" ? "any" : "all";
+    const results = conditions.map((c) =>
+      matchOp(c.op, fields[c.field] ?? "", String(c.value || "").toLowerCase()),
+    );
+    const hit = match === "any" ? results.some(Boolean) : results.every(Boolean);
+    if (hit) out.push(label);
+  }
+  return out;
+}
 
 export async function applyFilters(env, userId, ctx) {
   const res = await env.DB.prepare(

@@ -28,6 +28,7 @@ import {
   FOLDERS,
   insertMessage,
   updateStorage,
+  validateLabelRule,
 } from "./store.js";
 import {
   clampInt,
@@ -755,11 +756,22 @@ export async function handleApi(request, env, ctx) {
 
   if (path === "/api/labels" && method === "GET") {
     const res = await env.DB.prepare(
-      "SELECT id, name, color FROM labels WHERE user_id = ? ORDER BY name",
+      "SELECT id, name, color, rule_json FROM labels WHERE user_id = ? ORDER BY name",
     )
       .bind(user.id)
       .all();
-    return json({ labels: res.results || [] });
+    const labels = (res.results || []).map((l) => {
+      let rule = null;
+      if (typeof l.rule_json === "string") {
+        try {
+          rule = JSON.parse(l.rule_json);
+        } catch {
+          rule = null;
+        }
+      }
+      return { id: l.id, name: l.name, color: l.color, rule };
+    });
+    return json({ labels });
   }
   if (path === "/api/labels" && method === "POST") {
     const b = await readJson(request);
@@ -767,13 +779,35 @@ export async function handleApi(request, env, ctx) {
       .trim()
       .slice(0, 40);
     if (!name) return error(400, "name required");
+    const rule = validateLabelRule(b.rule);
+    if (rule === false) return error(400, "invalid rule");
+    const color = String(b.color || "#8b7fd6").slice(0, 9);
+    const ruleJson = rule ? JSON.stringify(rule) : null;
     const id = uuid();
     await env.DB.prepare(
-      "INSERT INTO labels (id, user_id, name, color, created_at) VALUES (?,?,?,?,?)",
+      "INSERT INTO labels (id, user_id, name, color, rule_json, created_at) VALUES (?,?,?,?,?,?)",
     )
-      .bind(id, user.id, name, String(b.color || "#8b7fd6").slice(0, 9), now())
+      .bind(id, user.id, name, color, ruleJson, now())
       .run();
-    return json({ id, name, color: b.color || "#8b7fd6" });
+    return json({ id, name, color, rule });
+  }
+  if ((m = path.match(/^\/api\/labels\/([\w-]+)$/)) && (method === "PUT" || method === "PATCH")) {
+    const b = await readJson(request);
+    const name = String(b.name || "")
+      .trim()
+      .slice(0, 40);
+    if (!name) return error(400, "name required");
+    const rule = validateLabelRule(b.rule);
+    if (rule === false) return error(400, "invalid rule");
+    const color = String(b.color || "#8b7fd6").slice(0, 9);
+    const ruleJson = rule ? JSON.stringify(rule) : null;
+    const res = await env.DB.prepare(
+      "UPDATE labels SET name = ?, color = ?, rule_json = ? WHERE id = ? AND user_id = ?",
+    )
+      .bind(name, color, ruleJson, m[1], user.id)
+      .run();
+    if (!res.meta?.changes) return error(404, "not found");
+    return json({ id: m[1], name, color, rule });
   }
   if ((m = path.match(/^\/api\/labels\/([\w-]+)$/)) && method === "DELETE") {
     await env.DB.prepare("DELETE FROM labels WHERE id = ? AND user_id = ?")

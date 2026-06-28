@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS labels (
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   color TEXT NOT NULL DEFAULT '#8b7fd6',
+  rule_json TEXT,
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_labels_user ON labels(user_id);

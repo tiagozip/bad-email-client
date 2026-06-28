@@ -74,7 +74,8 @@ export const api = {
   updateDraft: (id, payload) => req("PUT", `/api/drafts/${id}`, payload),
 
   labels: () => req("GET", "/api/labels"),
-  createLabel: (name, color) => req("POST", "/api/labels", { name, color }),
+  createLabel: (name, color, rule) => req("POST", "/api/labels", { name, color, rule }),
+  updateLabel: (id, { name, color, rule }) => req("PUT", `/api/labels/${id}`, { name, color, rule }),
   deleteLabel: (id) => req("DELETE", `/api/labels/${id}`),
   contacts: (q) => req("GET", `/api/contacts?q=${encodeURIComponent(q || "")}`),
   emlUrl: (id) => `/api/messages/${id}/raw`,

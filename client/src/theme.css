@@ -2872,8 +2872,192 @@ html[data-theme="sakura"] {
   background: var(--em-brand-soft);
 }
 
-.em-nav-labelform {
-  padding: 2px 8px;
+.em-nav-labelrow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+}
+
+.em-nav-labelmain {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.em-label-auto {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  margin-left: auto;
+  background: var(--text-color-kumo-brand);
+}
+
+.em-label-edit {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-right: 6px;
+  border: none;
+  background: none;
+  border-radius: var(--em-radius-sm);
+  color: var(--text-color-kumo-inactive);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--em-fast), color var(--em-fast), background var(--em-fast);
+}
+
+.em-nav-labelrow:hover .em-label-edit {
+  opacity: 1;
+}
+
+.em-label-edit:hover {
+  color: var(--text-color-kumo-strong);
+  background: var(--color-kumo-tint);
+}
+
+.em-label-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--em-4);
+}
+
+.em-label-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.em-label-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-color-kumo-strong);
+}
+
+.em-label-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--em-4);
+}
+
+.em-label-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--em-2);
+}
+
+.em-label-fieldlabel {
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--text-color-kumo-subtle);
+}
+
+.em-swatch-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--em-2);
+}
+
+.em-swatch {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 2px solid transparent;
+  border-radius: var(--em-radius-sm);
+  cursor: pointer;
+  transition: transform var(--em-fast), border-color var(--em-fast);
+}
+
+.em-swatch:hover {
+  transform: scale(1.06);
+}
+
+.em-swatch.is-selected {
+  border-color: var(--text-color-kumo-strong);
+}
+
+.em-rule-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.em-rule-match {
+  display: inline-flex;
+  border: 1px solid var(--color-kumo-hairline);
+  border-radius: var(--em-radius-sm);
+  overflow: hidden;
+}
+
+.em-rule-toggle {
+  padding: 4px 12px;
+  border: none;
+  background: none;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-color-kumo-subtle);
+  cursor: pointer;
+  transition: background var(--em-fast), color var(--em-fast);
+}
+
+.em-rule-toggle.is-active {
+  background: var(--em-brand-soft);
+  color: var(--text-color-kumo-brand);
+  font-weight: 600;
+}
+
+.em-rule-empty {
+  font-size: 0.84rem;
+  color: var(--text-color-kumo-inactive);
+  padding: var(--em-2) 0;
+}
+
+.em-rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--em-2);
+}
+
+.em-rule-row {
+  display: flex;
+  align-items: center;
+  gap: var(--em-2);
+}
+
+.em-rule-row .kumo-input {
+  flex: 1;
+  min-width: 80px;
+}
+
+.em-label-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.em-label-foot-right {
+  display: flex;
+  align-items: center;
+  gap: var(--em-2);
+  margin-left: auto;
+}
+
+.em-label-delete {
+  color: var(--text-color-kumo-danger, #d23f73);
 }
 
 .em-nav-foot {

@@ -9,6 +9,7 @@ import {
   bumpContact,
   htmlKey,
   insertMessage,
+  labelsForMessage,
   rawKey,
   resolveThread,
   updateStorage,
@@ -217,6 +218,7 @@ export async function handleEmail(message, env, ctx) {
 
   let filterRead = 0;
   let filterStar = 0;
+  let autoLabels = [];
   if (!spoofed) {
     const applied = await applyFilters(env, userId, {
       fromAddr,
@@ -227,6 +229,20 @@ export async function handleEmail(message, env, ctx) {
     if (applied.folder) folder = applied.folder;
     if (applied.read) filterRead = 1;
     if (applied.star) filterStar = 1;
+
+    const ruled = await env.DB.prepare(
+      "SELECT id, rule_json FROM labels WHERE user_id = ? AND rule_json IS NOT NULL",
+    )
+      .bind(userId)
+      .all();
+    const bodyText = parsed.text || parsed.html?.replace(/<[^>]+>/g, " ") || "";
+    autoLabels = labelsForMessage(ruled.results || [], {
+      fromAddr,
+      fromName,
+      to: toList.map((t) => `${t.name || ""} ${t.address || ""}`).join(" "),
+      subject: parsed.subject || "",
+      body: bodyText,
+    });
   }
 
   await insertMessage(env, {
@@ -284,6 +300,14 @@ export async function handleEmail(message, env, ctx) {
         a.status,
         now(),
       )
+      .run();
+  }
+
+  for (const label of autoLabels) {
+    await env.DB.prepare(
+      "INSERT OR IGNORE INTO message_labels (message_id, label_id) SELECT ?, ? WHERE EXISTS (SELECT 1 FROM labels WHERE id = ? AND user_id = ?)",
+    )
+      .bind(messageId, label.id, label.id, userId)
       .run();
   }
 

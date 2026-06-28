@@ -1,4 +1,4 @@
-import { DropdownMenu, Input } from "@cloudflare/kumo";
+import { DropdownMenu } from "@cloudflare/kumo";
 import {
   Archive,
   CaretUpDown,
@@ -6,18 +6,19 @@ import {
   Gear,
   Moon,
   PaperPlaneTilt,
+  PencilSimple,
+  Plus,
   ShieldCheck,
   SignOut,
   Star,
   Sun,
-  Tag,
   Trash,
   Tray,
   Warning,
 } from "@phosphor-icons/react";
 import { useState } from "react";
-import { api } from "../api.js";
 import { FOLDER_LABELS, initials, monoColor } from "../util.js";
+import { LabelModal } from "./LabelModal.jsx";
 
 const FOLDERS = [
   { key: "inbox", icon: Tray },
@@ -46,8 +47,8 @@ export function MailSidebar({
   onNavigate,
 }) {
   const { user, view, goView, counts, labels, refreshLabels } = store;
-  const [addingLabel, setAddingLabel] = useState(false);
-  const [labelName, setLabelName] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editLabel, setEditLabel] = useState(null);
   const active = activeKey(view);
 
   function navigate(v) {
@@ -60,20 +61,15 @@ export function MailSidebar({
     else navigate({ kind: "folder", folder: key });
   }
 
-  async function createLabel(e) {
-    e.preventDefault();
-    const name = labelName.trim();
-    if (!name) return;
-    const palette = ["#bf3264", "#e0789f", "#8b7fd6", "#5aa9e6", "#5fcf80", "#e6b450"];
-    const color = palette[Math.floor(Math.random() * palette.length)];
-    try {
-      await api.createLabel(name, color);
-      setLabelName("");
-      setAddingLabel(false);
-      refreshLabels();
-    } catch {
-      setAddingLabel(false);
-    }
+  function openCreate() {
+    setEditLabel(null);
+    setModalOpen(true);
+  }
+
+  function openEdit(label, e) {
+    e.stopPropagation();
+    setEditLabel(label);
+    setModalOpen(true);
   }
 
   return (
@@ -99,34 +95,33 @@ export function MailSidebar({
 
       <div className="em-nav-list">
         {labels.map((l) => (
-          <button
+          <div
             key={l.id}
-            type="button"
-            className={`em-nav-item${active === `label:${l.id}` ? " is-active" : ""}`}
-            onClick={() => navigate({ kind: "label", labelId: l.id, name: l.name })}
+            className={`em-nav-item em-nav-labelrow${active === `label:${l.id}` ? " is-active" : ""}`}
           >
-            <span className="em-label-dot" style={{ background: l.color }} />
-            <span className="em-nav-label">{l.name}</span>
-          </button>
+            <button
+              type="button"
+              className="em-nav-labelmain"
+              onClick={() => navigate({ kind: "label", labelId: l.id, name: l.name })}
+            >
+              <span className="em-label-dot" style={{ background: l.color }} />
+              <span className="em-nav-label">{l.name}</span>
+              {l.rule?.conditions?.length > 0 && <span className="em-label-auto" aria-hidden="true" />}
+            </button>
+            <button
+              type="button"
+              className="em-label-edit"
+              aria-label={`Edit ${l.name}`}
+              onClick={(e) => openEdit(l, e)}
+            >
+              <PencilSimple size={14} />
+            </button>
+          </div>
         ))}
-        {addingLabel ? (
-          <form className="em-nav-labelform" onSubmit={createLabel}>
-            <Input
-              size="sm"
-              autoFocus
-              placeholder="Label name"
-              aria-label="New label name"
-              value={labelName}
-              onChange={(e) => setLabelName(e.target.value)}
-              onBlur={() => !labelName && setAddingLabel(false)}
-            />
-          </form>
-        ) : (
-          <button type="button" className="em-nav-item em-nav-muted" onClick={() => setAddingLabel(true)}>
-            <Tag size={18} />
-            <span className="em-nav-label">Add label</span>
-          </button>
-        )}
+        <button type="button" className="em-nav-item em-nav-muted" onClick={openCreate}>
+          <Plus size={18} />
+          <span className="em-nav-label">Add label</span>
+        </button>
       </div>
 
       <div className="em-nav-foot">
@@ -168,6 +163,13 @@ export function MailSidebar({
           </DropdownMenu.Content>
         </DropdownMenu>
       </div>
+
+      <LabelModal
+        open={modalOpen}
+        label={editLabel}
+        onClose={() => setModalOpen(false)}
+        onSaved={refreshLabels}
+      />
     </div>
   );
 }
