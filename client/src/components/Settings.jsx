@@ -986,6 +986,8 @@ export function Settings({ open, user, setUser, mode, onSetMode, palette, onSetP
           </>
           )}
 
+          {section === "notifications" && <Notifications />}
+
           {section === "filters" && <Filters />}
 
           {section === "encryption" && <Encryption user={user} setUser={setUser} />}
