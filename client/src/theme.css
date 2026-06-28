@@ -549,6 +549,12 @@ html[data-theme="sakura"] {
   background: color-mix(in srgb, var(--color-kumo-canvas) 78%, transparent);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
+  transition: border-color var(--em-fast), background var(--em-fast);
+}
+
+.em-floatbar-search:focus-within {
+  border-color: var(--em-brand-soft-border);
+  background: color-mix(in srgb, var(--color-kumo-canvas) 90%, transparent);
 }
 
 .em-floatbar-icon {
@@ -1540,7 +1546,7 @@ html[data-theme="sakura"] {
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--text-color-kumo-subtle);
-  transition: background 0.12s, color 0.12s;
+  transition: background var(--em-fast), color var(--em-fast);
 }
 
 .em-settings-nav:hover {
