@@ -3,6 +3,7 @@ import PostalMime from "postal-mime";
 import { encryptBytes, encryptText } from "./crypto.js";
 import { sendPush } from "./push.js";
 import { sanitizeEmailHtml } from "./sanitize.js";
+import { classifySpam } from "./spam.js";
 import {
   applyFilters,
   attKey,
@@ -243,6 +244,18 @@ export async function handleEmail(message, env, ctx) {
       subject: parsed.subject || "",
       body: bodyText,
     });
+
+    if (folder === "inbox") {
+      const verdict = await classifySpam(env, {
+        from: `${fromName} <${fromAddr}>`,
+        subject: parsed.subject || "",
+        text: bodyText,
+      });
+      if (verdict?.spam && verdict.score >= 0.7) {
+        folder = "spam";
+        console.log("ai-spam", fromAddr, verdict.score, verdict.reason);
+      }
+    }
   }
 
   await insertMessage(env, {
