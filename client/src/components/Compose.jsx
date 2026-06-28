@@ -253,7 +253,8 @@ export function Compose({ open, initial, user, onClose, onSent }) {
     setSubject(init.subject || "");
     setBodyHtml(html);
     setBodyText(init.body || "");
-    if (editorRef.current) editorRef.current.commands.setContent(html || "<p></p>");
+    if (editorRef.current && !editorRef.current.isDestroyed)
+      editorRef.current.commands.setContent(html || "<p></p>");
     setShowCc(!!init.cc);
     setShowBcc(false);
     for (const url of previews.current.values()) URL.revokeObjectURL(url);

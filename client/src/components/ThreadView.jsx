@@ -493,13 +493,7 @@ export function ThreadView({ store, onReply, onForward, onBack }) {
 
   useEffect(() => {
     if (thread?.messages?.length) {
-      const list = thread.messages;
-      const last = list[list.length - 1];
-      const next = new Set([last.id]);
-      for (const m of list) {
-        if (!m.isRead) next.add(m.id);
-      }
-      setExpandedIds(next);
+      setExpandedIds(new Set(thread.messages.map((m) => m.id)));
     }
   }, [thread]);
 
