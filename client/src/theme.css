@@ -1548,6 +1548,7 @@ html[data-theme="sakura"] {
 
 .em-settings-body {
   display: flex;
+  flex: 1;
   overflow: hidden;
   min-height: 0;
 }
