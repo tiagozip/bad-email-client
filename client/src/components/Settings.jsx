@@ -882,43 +882,209 @@ function Notifications() {
   );
 }
 
-function Domains() {
-  const [domains, setDomains] = useState(null);
-  const [directory, setDirectory] = useState([]);
-  const [input, setInput] = useState("");
+function CopyField({ label, value }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard?.writeText(value);
+    } catch {}
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
+  }
+  return (
+    <div className="em-dns-field">
+      <span className="em-dns-field-label">{label}</span>
+      <button type="button" className="em-dns-field-val" onClick={copy} title="Copy">
+        <code>{value}</code>
+        {copied ? <Check size={14} weight="bold" /> : <Copy size={14} />}
+      </button>
+    </div>
+  );
+}
+
+function DomainSetupModal({ open, onClose, onDone }) {
+  const [step, setStep] = useState(1);
+  const [domain, setDomain] = useState("");
+  const [created, setCreated] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [verifying, setVerifying] = useState("");
-  const [lookups, setLookups] = useState({});
+  const [result, setResult] = useState(null);
 
   useEffect(() => {
-    api
-      .domains()
-      .then((d) => setDomains(d.domains || []))
-      .catch(notifyError);
-    api
-      .publicDomains()
-      .then((d) => setDirectory(d.domains || []))
-      .catch(() => {});
-  }, []);
+    if (open) {
+      setStep(1);
+      setDomain("");
+      setCreated(null);
+      setError("");
+      setResult(null);
+      setBusy(false);
+    }
+  }, [open]);
 
-  async function add(e) {
-    e.preventDefault();
-    const d = input.trim().toLowerCase();
+  const dom = domain.trim().toLowerCase() || "yourdomain.com";
+  const ready = result?.verified && result?.sendVerified;
+
+  async function createDomain() {
+    const d = domain.trim().toLowerCase();
     if (!d) return;
     setBusy(true);
     setError("");
     try {
-      await api.addDomain(d);
-      setInput("");
-      const res = await api.domains();
-      setDomains(res.domains || []);
+      const r = await api.addDomain(d);
+      setCreated(r);
+      setStep(2);
     } catch (err) {
       setError(err.message);
     } finally {
       setBusy(false);
     }
   }
+
+  async function verify() {
+    if (!created) return;
+    setBusy(true);
+    try {
+      setResult(await api.verifyDomain(created.id));
+    } catch (err) {
+      notifyError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <DialogRoot open={open} onOpenChange={(o) => !o && onClose()}>
+      <Dialog className="em-setup-dialog" style={{ width: 560, maxWidth: "94vw", padding: "var(--em-6)" }}>
+        <div className="em-label-head">
+          <Dialog.Title className="em-label-title">Add a domain</Dialog.Title>
+          <Button size="sm" variant="ghost" shape="square" aria-label="Close" icon={X} onClick={onClose} />
+        </div>
+        <div className="em-setup-progress">Step {step} of 3</div>
+
+        {step === 1 && (
+          <div className="em-setup-body">
+            <p className="em-card-sub">
+              Enter the domain you want to send and receive mail on. It needs to be on the Cloudflare
+              account that runs this server.
+            </p>
+            <Input
+              autoFocus
+              label="Domain"
+              placeholder="example.com"
+              value={domain}
+              onChange={(e) => {
+                setDomain(e.target.value);
+                setError("");
+              }}
+            />
+            {error && <div className="em-form-error">{error}</div>}
+            <div className="em-label-foot">
+              <Button variant="ghost" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button variant="primary" loading={busy} onClick={createDomain}>
+                Continue
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="em-setup-body">
+            <p className="em-card-sub">
+              Add these DNS records for <b>{dom}</b>. If its DNS is on Cloudflare, just turn on{" "}
+              <b>Email Routing</b> and <b>Email Sending</b> for it and Cloudflare adds them all for
+              you, then come back and verify.
+            </p>
+            <div className="em-setup-section">Receiving — MX records (host {dom})</div>
+            <CopyField label="MX" value="route1.mx.cloudflare.net" />
+            <CopyField label="MX" value="route2.mx.cloudflare.net" />
+            <CopyField label="MX" value="route3.mx.cloudflare.net" />
+            <div className="em-setup-section">Sending — SPF (TXT, host {dom})</div>
+            <CopyField label="TXT" value="v=spf1 include:_spf.mx.cloudflare.net ~all" />
+            <div className="em-setup-section">Sending — DKIM</div>
+            <p className="em-setup-note">
+              The DKIM record is unique to your domain. Turn on Email Sending for {dom} in Cloudflare
+              (Email → Email Sending → onboard) and it adds the DKIM record automatically.
+            </p>
+            <div className="em-label-foot">
+              <Button variant="ghost" onClick={() => setStep(1)}>
+                Back
+              </Button>
+              <Button variant="primary" onClick={() => setStep(3)}>
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="em-setup-body">
+            <p className="em-card-sub">
+              Verify <b>{dom}</b>. DNS can take a few minutes to propagate after you add the records.
+            </p>
+            {result && (
+              <div className="em-dns-check">
+                <span className={result.verified ? "is-ok" : "is-bad"}>
+                  {result.verified ? "✓" : "✗"} Receiving (MX)
+                </span>
+                <span className={result.sending?.spf ? "is-ok" : "is-bad"}>
+                  {result.sending?.spf ? "✓" : "✗"} SPF
+                </span>
+                <span className={result.sending?.dkim ? "is-ok" : "is-bad"}>
+                  {result.sending?.dkim ? "✓" : "✗"} DKIM
+                </span>
+              </div>
+            )}
+            {ready && <div className="em-setup-success">Your domain is ready to send and receive.</div>}
+            <div className="em-label-foot">
+              <Button variant="ghost" onClick={() => setStep(2)}>
+                Back
+              </Button>
+              {ready ? (
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    onDone();
+                    onClose();
+                  }}
+                >
+                  Done
+                </Button>
+              ) : (
+                <Button variant="primary" loading={busy} onClick={verify}>
+                  {result ? "Check again" : "Verify"}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </Dialog>
+    </DialogRoot>
+  );
+}
+
+function Domains() {
+  const [domains, setDomains] = useState(null);
+  const [directory, setDirectory] = useState([]);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [verifying, setVerifying] = useState("");
+  const [lookups, setLookups] = useState({});
+
+  function refresh() {
+    api
+      .domains()
+      .then((d) => setDomains(d.domains || []))
+      .catch(notifyError);
+  }
+
+  useEffect(() => {
+    refresh();
+    api
+      .publicDomains()
+      .then((d) => setDirectory(d.domains || []))
+      .catch(() => {});
+  }, []);
 
   async function verify(id) {
     setVerifying(id);
@@ -1052,41 +1218,10 @@ function Domains() {
           </div>
         )}
 
-        <form className="em-alias-add" onSubmit={add}>
-          <div className="em-alias-input">
-            <input
-              aria-label="New domain"
-              placeholder="example.com"
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value);
-                setError("");
-              }}
-            />
-          </div>
-          <Button type="submit" variant="outline" icon={Plus} loading={busy}>
+        <div className="em-alias-add">
+          <Button variant="outline" icon={Plus} onClick={() => setSetupOpen(true)}>
             Add domain
           </Button>
-        </form>
-        {error && (
-          <div className="em-form-error" style={{ marginTop: 8 }}>
-            {error}
-          </div>
-        )}
-
-        <div className="em-dns-steps">
-          <div className="em-dns-steps-title">Setup</div>
-          <ol>
-            <li>The domain must be on the Cloudflare account that runs this mail server.</li>
-            <li>
-              Enable Email Routing (adds the MX records) and point the catch-all at this worker,
-              then enable Email Sending (adds SPF + DKIM).
-            </li>
-            <li>
-              Press Verify. Receiving passes once the MX resolves, sending once SPF and DKIM
-              resolve.
-            </li>
-          </ol>
         </div>
       </div>
 
@@ -1110,6 +1245,8 @@ function Domains() {
           </div>
         </div>
       )}
+
+      <DomainSetupModal open={setupOpen} onClose={() => setSetupOpen(false)} onDone={refresh} />
     </>
   );
 }

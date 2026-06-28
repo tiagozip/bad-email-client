@@ -2018,6 +2018,88 @@ html[data-theme="sakura"] {
   cursor: pointer;
 }
 
+.em-setup-progress {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-color-kumo-brand);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.em-setup-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--em-3);
+}
+
+.em-setup-section {
+  margin-top: var(--em-2);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-color-kumo-strong);
+}
+
+.em-setup-note {
+  font-size: 0.82rem;
+  color: var(--text-color-kumo-subtle);
+  line-height: 1.5;
+}
+
+.em-setup-success {
+  padding: var(--em-3);
+  border-radius: var(--em-radius-sm);
+  background: var(--em-brand-soft);
+  color: var(--text-color-kumo-brand);
+  font-size: 0.86rem;
+  font-weight: 500;
+}
+
+.em-dns-field {
+  display: flex;
+  align-items: center;
+  gap: var(--em-3);
+}
+
+.em-dns-field-label {
+  flex: none;
+  width: 38px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-color-kumo-inactive);
+}
+
+.em-dns-field-val {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--em-2);
+  padding: 8px var(--em-3);
+  border: 1px solid var(--color-kumo-line);
+  border-radius: var(--em-radius-sm);
+  background: var(--color-kumo-control);
+  cursor: pointer;
+  transition: border-color var(--em-fast);
+}
+
+.em-dns-field-val:hover {
+  border-color: var(--color-kumo-brand);
+}
+
+.em-dns-field-val code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  color: var(--text-color-kumo-default);
+}
+
+.em-dns-field-val svg {
+  flex: none;
+  color: var(--text-color-kumo-inactive);
+}
+
 .em-dns-check {
   display: flex;
   flex-direction: column;
