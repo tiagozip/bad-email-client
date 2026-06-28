@@ -1,25 +1,100 @@
 import * as openpgp from "openpgp";
 
 let unlockedKey = null;
-const PASS_KEY = "em-pgp-pass";
+const LEGACY_PASS_KEY = "em-pgp-pass";
+const DB_NAME = "em-secure";
+const STORE = "vault";
+const DEVICE_KEY_ID = "device-key";
+const PASS_ID = "wrapped-pass";
 
-export function rememberPass(pass) {
+function openDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbGet(id) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(STORE, "readonly").objectStore(STORE).get(id);
+    req.onsuccess = () => resolve(req.result ?? null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbSet(id, value) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).put(value, id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function idbDel(id) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function deviceKey() {
+  const existing = await idbGet(DEVICE_KEY_ID);
+  if (existing) return existing;
+  const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
+    "encrypt",
+    "decrypt",
+  ]);
+  await idbSet(DEVICE_KEY_ID, key);
+  return key;
+}
+
+export async function rememberPass(pass) {
   try {
-    localStorage.setItem(PASS_KEY, pass);
+    const key = await deviceKey();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(
+      await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(pass)),
+    );
+    await idbSet(PASS_ID, { iv, ct });
+    try {
+      localStorage.removeItem(LEGACY_PASS_KEY);
+    } catch {}
   } catch {}
 }
 
-export function getRememberedPass() {
+export async function getRememberedPass() {
   try {
-    return localStorage.getItem(PASS_KEY);
+    const legacy = localStorage.getItem(LEGACY_PASS_KEY);
+    if (legacy) {
+      await rememberPass(legacy);
+      return legacy;
+    }
+  } catch {}
+  try {
+    const blob = await idbGet(PASS_ID);
+    if (!blob) return null;
+    const key = await deviceKey();
+    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: blob.iv }, key, blob.ct);
+    return new TextDecoder().decode(pt);
   } catch {
     return null;
   }
 }
 
-export function forgetPass() {
+export async function forgetPass() {
   try {
-    localStorage.removeItem(PASS_KEY);
+    await idbDel(PASS_ID);
+  } catch {}
+  try {
+    localStorage.removeItem(LEGACY_PASS_KEY);
   } catch {}
 }
 

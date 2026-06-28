@@ -1643,6 +1643,21 @@ html[data-theme="sakura"] {
   margin-top: var(--em-2);
 }
 
+.em-e2e-never {
+  align-self: center;
+  margin-top: var(--em-3);
+  border: none;
+  background: none;
+  font-size: 0.8rem;
+  color: var(--text-color-kumo-inactive);
+  cursor: pointer;
+  transition: color var(--em-fast);
+}
+
+.em-e2e-never:hover {
+  color: var(--text-color-kumo-subtle);
+}
+
 .em-card {
   border: 1px solid var(--color-kumo-line);
   border-radius: var(--em-radius-lg);

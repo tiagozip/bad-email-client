@@ -344,7 +344,7 @@ function Encryption({ user, setUser }) {
       );
       await api.enablePgp(publicKey, privateKeyEnc);
       await pgp.unlock(privateKeyEnc, pass);
-      pgp.rememberPass(pass);
+      await pgp.rememberPass(pass);
       await refreshUser();
       setShowForm(false);
       setPass("");

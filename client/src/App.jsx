@@ -41,7 +41,7 @@ export function App() {
   useEffect(() => {
     api
       .me()
-      .then((d) => {
+      .then(async (d) => {
         if (d.user) {
           setUser(d.user);
           const t = d.user.settings?.theme;
@@ -51,12 +51,16 @@ export function App() {
           if (d.user.settings?.imagesDefault !== undefined) {
             localStorage.setItem("em-images-default", d.user.settings.imagesDefault ? "1" : "0");
           }
-          const savedPass = pgp.getRememberedPass();
-          if (d.user.pgpEnabled && savedPass && !pgp.getUnlocked()) {
-            api
-              .getPgp()
-              .then((p) => p.privateKeyEnc && pgp.unlock(p.privateKeyEnc, savedPass))
-              .catch(() => pgp.forgetPass());
+          if (d.user.pgpEnabled && !pgp.getUnlocked()) {
+            const savedPass = await pgp.getRememberedPass();
+            if (savedPass) {
+              try {
+                const key = await api.getPgp();
+                if (key.privateKeyEnc) await pgp.unlock(key.privateKeyEnc, savedPass);
+              } catch {
+                await pgp.forgetPass();
+              }
+            }
           }
         }
       })

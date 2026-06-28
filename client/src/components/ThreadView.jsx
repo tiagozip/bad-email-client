@@ -95,8 +95,8 @@ function PgpLock({ onUnlocked }) {
         return;
       }
       await pgp.unlock(privateKeyEnc, pass);
-      if (remember) pgp.rememberPass(pass);
-      else pgp.forgetPass();
+      if (remember) await pgp.rememberPass(pass);
+      else await pgp.forgetPass();
       setPass("");
       onUnlocked();
     } catch {

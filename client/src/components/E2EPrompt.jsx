@@ -6,6 +6,7 @@ import * as pgp from "../pgp.js";
 import { notify } from "../toast.js";
 
 const DISMISS_KEY = "em-e2e-prompt";
+const LATER_KEY = "em-e2e-later";
 
 export function E2EPrompt({ user, setUser, onClose }) {
   const [pass, setPass] = useState("");
@@ -13,7 +14,14 @@ export function E2EPrompt({ user, setUser, onClose }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  function dismiss() {
+  function later() {
+    try {
+      sessionStorage.setItem(LATER_KEY, "1");
+    } catch {}
+    onClose();
+  }
+
+  function never() {
     try {
       localStorage.setItem(DISMISS_KEY, "1");
     } catch {}
@@ -40,7 +48,7 @@ export function E2EPrompt({ user, setUser, onClose }) {
       );
       await api.enablePgp(publicKey, privateKeyEnc);
       await pgp.unlock(privateKeyEnc, pass);
-      pgp.rememberPass(pass);
+      await pgp.rememberPass(pass);
       const d = await api.me();
       if (d.user) setUser(d.user);
       try {
@@ -56,16 +64,16 @@ export function E2EPrompt({ user, setUser, onClose }) {
   }
 
   return (
-    <DialogRoot open onOpenChange={(o) => !o && dismiss()}>
+    <DialogRoot open onOpenChange={(o) => !o && later()}>
       <Dialog className="em-e2e-dialog" style={{ width: 460, maxWidth: "94vw" }}>
         <div className="em-e2e-icon">
           <ShieldCheck size={30} weight="fill" />
         </div>
-        <Dialog.Title className="em-e2e-title">Turn on end-to-end encryption</Dialog.Title>
+        <Dialog.Title className="em-e2e-title">Encrypt your inbox</Dialog.Title>
         <p className="em-e2e-copy">
-          Encrypt your inbox so only you can read it. New mail is encrypted to your key the moment
-          it arrives, and your passphrase never leaves this device. Pick something you'll remember,
-          if you lose it, your encrypted mail can't be recovered.
+          Encryption is on by default here. New mail is encrypted to your key the moment it arrives,
+          so only you can read it, and your passphrase never leaves this device. Pick something
+          you'll remember, if you lose it, your encrypted mail can't be recovered.
         </p>
         <form className="em-e2e-form" onSubmit={enable}>
           <Input
@@ -88,13 +96,16 @@ export function E2EPrompt({ user, setUser, onClose }) {
           />
           {error && <div className="em-form-error">{error}</div>}
           <div className="em-e2e-actions">
-            <Button type="button" variant="ghost" onClick={dismiss}>
+            <Button type="button" variant="ghost" onClick={later}>
               Maybe later
             </Button>
             <Button type="submit" variant="primary" icon={LockKey} loading={busy}>
               Enable encryption
             </Button>
           </div>
+          <button type="button" className="em-e2e-never" onClick={never}>
+            Don't ask again
+          </button>
         </form>
       </Dialog>
     </DialogRoot>
@@ -104,7 +115,8 @@ export function E2EPrompt({ user, setUser, onClose }) {
 export function shouldPromptE2E(user) {
   if (!user || user.pgpEnabled) return false;
   try {
-    return localStorage.getItem(DISMISS_KEY) !== "1";
+    if (localStorage.getItem(DISMISS_KEY) === "1") return false;
+    return sessionStorage.getItem(LATER_KEY) !== "1";
   } catch {
     return false;
   }
