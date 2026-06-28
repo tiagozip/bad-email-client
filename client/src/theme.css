@@ -1969,7 +1969,6 @@ html[data-theme="sakura"] {
   display: flex;
   align-items: center;
   padding-right: var(--em-2);
-  border-left: 1px solid var(--color-kumo-hairline);
 }
 
 .em-domain-row {

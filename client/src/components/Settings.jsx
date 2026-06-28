@@ -902,7 +902,7 @@ function CopyField({ label, value }) {
   );
 }
 
-function DomainSetupModal({ open, onClose, onDone }) {
+function DomainSetupModal({ open, existing, onClose, onDone }) {
   const [step, setStep] = useState(1);
   const [domain, setDomain] = useState("");
   const [created, setCreated] = useState(null);
@@ -912,14 +912,14 @@ function DomainSetupModal({ open, onClose, onDone }) {
 
   useEffect(() => {
     if (open) {
-      setStep(1);
-      setDomain("");
-      setCreated(null);
+      setStep(existing ? 2 : 1);
+      setDomain(existing?.domain || "");
+      setCreated(existing || null);
       setError("");
       setResult(null);
       setBusy(false);
     }
-  }, [open]);
+  }, [open, existing]);
 
   const dom = domain.trim().toLowerCase() || "yourdomain.com";
   const ready = result?.verified && result?.sendVerified;
@@ -1068,8 +1068,7 @@ function Domains() {
   const [domains, setDomains] = useState(null);
   const [directory, setDirectory] = useState([]);
   const [setupOpen, setSetupOpen] = useState(false);
-  const [verifying, setVerifying] = useState("");
-  const [lookups, setLookups] = useState({});
+  const [setupExisting, setSetupExisting] = useState(null);
 
   function refresh() {
     api
@@ -1086,33 +1085,22 @@ function Domains() {
       .catch(() => {});
   }, []);
 
-  async function verify(id) {
-    setVerifying(id);
-    try {
-      const res = await api.verifyDomain(id);
-      setLookups((p) => ({ ...p, [id]: res }));
-      setDomains((p) =>
-        (p || []).map((d) =>
-          d.id === id ? { ...d, verified: res.verified, sendVerified: res.sendVerified } : d,
-        ),
-      );
-      if (res.verified && res.sendVerified)
-        notify("Domain ready", "This domain can send and receive mail.", "success");
-      else if (res.verified)
-        notify("Receiving verified", "Set up Email Sending to send from it too.", "success");
-    } catch (err) {
-      notifyError(err);
-    } finally {
-      setVerifying("");
-    }
+  function openSetup(d) {
+    setSetupExisting(d ? { id: d.id, domain: d.domain } : null);
+    setSetupOpen(true);
   }
 
   async function togglePublic(d, v) {
-    setDomains((p) => (p || []).map((x) => (x.id === d.id ? { ...x, public: v } : x)));
     try {
-      await api.setDomainPublic(d.id, v);
+      const r = await api.setDomainPublic(d.id, v);
+      setDomains((p) =>
+        (p || []).map((x) =>
+          x.id === d.id ? { ...x, public: !!r.public, publicPending: !!r.publicPending } : x,
+        ),
+      );
+      if (r.publicPending)
+        notify("Request sent", "An admin will review it before it goes public.", "success");
     } catch (err) {
-      setDomains((p) => (p || []).map((x) => (x.id === d.id ? { ...x, public: !v } : x)));
       notifyError(err);
     }
   }
@@ -1170,12 +1158,11 @@ function Domains() {
                   <div className="em-alias-actions">
                     <Button
                       size="sm"
-                      variant="outline"
+                      variant="ghost"
                       icon={ShieldCheck}
-                      loading={verifying === d.id}
-                      onClick={() => verify(d.id)}
+                      onClick={() => openSetup(d)}
                     >
-                      Verify
+                      {d.verified ? "Set up" : "Verify"}
                     </Button>
                     <Button
                       size="sm"
@@ -1191,27 +1178,17 @@ function Domains() {
                   <label className="em-domain-public">
                     <Switch
                       aria-label="List in public directory"
-                      checked={!!d.public}
+                      checked={!!d.public || !!d.publicPending}
                       onCheckedChange={(v) => togglePublic(d, v)}
                     />
-                    <span>List in public directory</span>
+                    <span>
+                      {d.publicPending
+                        ? "Pending admin review"
+                        : d.public
+                          ? "Listed in public directory"
+                          : "List in public directory"}
+                    </span>
                   </label>
-                )}
-                {lookups[d.id] && (
-                  <div className="em-domain-lookup">
-                    <div className="em-dns-check">
-                      <span className={lookups[d.id].verified ? "is-ok" : "is-bad"}>
-                        {lookups[d.id].verified ? "✓" : "✗"} Receiving (MX, Cloudflare Email
-                        Routing)
-                      </span>
-                      <span className={lookups[d.id].sending?.spf ? "is-ok" : "is-bad"}>
-                        {lookups[d.id].sending?.spf ? "✓" : "✗"} SPF record
-                      </span>
-                      <span className={lookups[d.id].sending?.dkim ? "is-ok" : "is-bad"}>
-                        {lookups[d.id].sending?.dkim ? "✓" : "✗"} DKIM record
-                      </span>
-                    </div>
-                  </div>
                 )}
               </div>
             ))}
@@ -1219,7 +1196,7 @@ function Domains() {
         )}
 
         <div className="em-alias-add">
-          <Button variant="outline" icon={Plus} onClick={() => setSetupOpen(true)}>
+          <Button variant="ghost" icon={Plus} onClick={() => openSetup(null)}>
             Add domain
           </Button>
         </div>
@@ -1246,7 +1223,12 @@ function Domains() {
         </div>
       )}
 
-      <DomainSetupModal open={setupOpen} onClose={() => setSetupOpen(false)} onDone={refresh} />
+      <DomainSetupModal
+        open={setupOpen}
+        existing={setupExisting}
+        onClose={() => setSetupOpen(false)}
+        onDone={refresh}
+      />
     </>
   );
 }
