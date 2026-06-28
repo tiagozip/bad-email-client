@@ -9,6 +9,7 @@ import {
   sha256Hex,
 } from "./auth.js";
 import { encryptBytes, tryDecryptBytes, tryDecryptText } from "./crypto.js";
+import { checkSendingDns, lookupMx } from "./domains.js";
 import {
   authorizeUrl,
   challengeFor,
@@ -294,58 +295,6 @@ function genHiddenLocal() {
   return `${adj}-${noun}-${10 + (r[2] % 90)}`;
 }
 const DOMAIN_RE = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
-const CF_MX_RE = /(?:^|\.)mx\.cloudflare\.net\.?$/;
-const CF_SPF_INCLUDE = "_spf.mx.cloudflare.net";
-const DKIM_SELECTORS = ["cf2024-1", "cf2024-2", "cf2025-1", "cf2026-1"];
-
-async function lookupTxt(name) {
-  const res = await fetch(
-    `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=TXT`,
-    { headers: { accept: "application/dns-json" } },
-  );
-  if (!res.ok) throw new Error("dns lookup failed");
-  const data = await res.json();
-  return (data.Answer || [])
-    .filter((a) => a.type === 16)
-    .map((a) =>
-      String(a.data || "")
-        .replace(/^"|"$/g, "")
-        .replace(/"\s+"/g, "")
-        .toLowerCase(),
-    );
-}
-
-async function checkSendingDns(domain) {
-  const spfRecords = await lookupTxt(domain);
-  const spf = spfRecords.some((t) => t.startsWith("v=spf1") && t.includes(CF_SPF_INCLUDE));
-  const dkimLists = await Promise.all(
-    DKIM_SELECTORS.map((sel) => lookupTxt(`${sel}._domainkey.${domain}`).catch(() => [])),
-  );
-  const dkim = dkimLists.some((list) =>
-    list.some((t) => t.includes("v=dkim1") && /p=\s*[a-z0-9+/]/.test(t)),
-  );
-  return { spf, dkim, ok: spf && dkim };
-}
-
-async function lookupMx(domain) {
-  const res = await fetch(
-    `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=MX`,
-    { headers: { accept: "application/dns-json" } },
-  );
-  if (!res.ok) throw new Error("dns lookup failed");
-  const data = await res.json();
-  const records = (data.Answer || [])
-    .filter((a) => a.type === 15)
-    .map((a) => {
-      const parts = String(a.data || "")
-        .trim()
-        .split(/\s+/);
-      const target = (parts.length > 1 ? parts[1] : parts[0]).replace(/\.$/, "").toLowerCase();
-      return { priority: Number.parseInt(parts[0], 10) || 0, target };
-    });
-  const routesToCloudflare = records.length > 0 && records.every((r) => CF_MX_RE.test(r.target));
-  return { records, routesToCloudflare };
-}
 
 async function verifiedDomainSet(env, userId) {
   const set = new Set([String(env.MAIL_DOMAIN || "").toLowerCase()]);
@@ -357,6 +306,21 @@ async function verifiedDomainSet(env, userId) {
   for (const r of res.results || []) set.add(String(r.domain).toLowerCase());
   set.delete("");
   return set;
+}
+
+async function notifyAdminsPublicRequest(env, domain, requester) {
+  const admins = await env.DB.prepare("SELECT address FROM users WHERE is_admin = 1").all();
+  for (const a of admins.results || []) {
+    if (!a.address) continue;
+    try {
+      await env.EMAIL.send({
+        to: a.address,
+        from: { email: `noreply@${env.MAIL_DOMAIN}`, name: "estrogen.mail" },
+        subject: `Domain publish request: ${domain}`,
+        text: `${requester.username || requester.address} requested to list ${domain} in the public directory. Approve or reject it in Admin, Public domains.`,
+      });
+    } catch {}
+  }
 }
 
 async function listAddresses(env, userId) {
@@ -1339,7 +1303,7 @@ export async function handleApi(request, env, ctx) {
 
   if (path === "/api/domains" && method === "GET") {
     const res = await env.DB.prepare(
-      "SELECT id, domain, verified, send_verified, public, created_at FROM domains WHERE owner_id = ? ORDER BY created_at DESC",
+      "SELECT id, domain, verified, send_verified, public, public_pending, created_at FROM domains WHERE owner_id = ? ORDER BY created_at DESC",
     )
       .bind(user.id)
       .all();
@@ -1349,6 +1313,7 @@ export async function handleApi(request, env, ctx) {
       verified: !!r.verified,
       sendVerified: !!r.send_verified,
       public: !!r.public,
+      publicPending: !!r.public_pending,
       createdAt: r.created_at,
       builtIn: false,
     }));
@@ -1416,17 +1381,29 @@ export async function handleApi(request, env, ctx) {
   }
   if ((m = path.match(/^\/api\/domains\/([\w-]+)$/)) && method === "PATCH") {
     const row = await env.DB.prepare(
-      "SELECT id, verified FROM domains WHERE id = ? AND owner_id = ?",
+      "SELECT id, domain, verified FROM domains WHERE id = ? AND owner_id = ?",
     )
       .bind(m[1], user.id)
       .first();
     if (!row) return error(404, "not found");
     const b = await readJson(request);
     if (typeof b.public === "boolean") {
-      if (b.public && !row.verified) return error(400, "verify the domain before publishing it");
-      await env.DB.prepare("UPDATE domains SET public = ? WHERE id = ?")
-        .bind(b.public ? 1 : 0, row.id)
-        .run();
+      if (!b.public) {
+        await env.DB.prepare("UPDATE domains SET public = 0, public_pending = 0 WHERE id = ?")
+          .bind(row.id)
+          .run();
+        return json({ public: false, publicPending: false });
+      }
+      if (!row.verified) return error(400, "verify the domain before publishing it");
+      if (user.is_admin) {
+        await env.DB.prepare("UPDATE domains SET public = 1, public_pending = 0 WHERE id = ?")
+          .bind(row.id)
+          .run();
+        return json({ public: true, publicPending: false });
+      }
+      await env.DB.prepare("UPDATE domains SET public_pending = 1 WHERE id = ?").bind(row.id).run();
+      ctx.waitUntil(notifyAdminsPublicRequest(env, row.domain, user));
+      return json({ public: false, publicPending: true });
     }
     return json({ ok: true });
   }
@@ -1441,6 +1418,33 @@ export async function handleApi(request, env, ctx) {
     if ((inUse?.n || 0) > 0)
       return error(409, `cannot remove: ${inUse.n} alias(es) still use this domain`);
     await env.DB.prepare("DELETE FROM domains WHERE id = ?").bind(m[1]).run();
+    return json({ ok: true });
+  }
+
+  if (path === "/api/admin/public-domains" && method === "GET") {
+    if (!user.is_admin) return error(403, "admin only");
+    const res = await env.DB.prepare(
+      "SELECT d.id, d.domain, d.public, d.public_pending, u.username AS owner FROM domains d LEFT JOIN users u ON u.id = d.owner_id WHERE d.public = 1 OR d.public_pending = 1 ORDER BY d.public_pending DESC, d.domain",
+    ).all();
+    return json({
+      domains: (res.results || []).map((r) => ({
+        id: r.id,
+        domain: r.domain,
+        public: !!r.public,
+        pending: !!r.public_pending,
+        owner: r.owner || "",
+      })),
+    });
+  }
+  if (
+    (m = path.match(/^\/api\/admin\/public-domains\/([\w-]+)\/(approve|reject)$/)) &&
+    method === "POST"
+  ) {
+    if (!user.is_admin) return error(403, "admin only");
+    const approve = m[2] === "approve";
+    await env.DB.prepare("UPDATE domains SET public = ?, public_pending = 0 WHERE id = ?")
+      .bind(approve ? 1 : 0, m[1])
+      .run();
     return json({ ok: true });
   }
 

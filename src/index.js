@@ -1,4 +1,5 @@
 import { handleApi } from "./api.js";
+import { reverifyAllDomains } from "./domains.js";
 import { handleEmail } from "./mail.js";
 import { error } from "./util.js";
 
@@ -54,5 +55,11 @@ export default {
       console.error("email handler error", e?.stack || e);
       message.setReject("451 4.3.0 Temporary processing error");
     }
+  },
+
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      reverifyAllDomains(env).catch((e) => console.error("reverify error", e?.stack || e)),
+    );
   },
 };
