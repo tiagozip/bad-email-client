@@ -274,14 +274,24 @@ export async function handleEmail(message, env, ctx) {
     });
 
     if (folder === "inbox" && aiSpamEnabled) {
-      const verdict = await classifySpam(env, {
-        from: `${fromName} <${fromAddr}>`,
-        subject: parsed.subject || "",
-        text: bodyText,
-      });
-      if (verdict?.spam && verdict.score >= 0.7) {
-        folder = "spam";
-        console.log("ai-spam", fromAddr, verdict.score, verdict.reason);
+      const internal = await env.DB.prepare("SELECT 1 FROM addresses WHERE address = ? LIMIT 1")
+        .bind(fromAddr)
+        .first();
+      const known =
+        internal ||
+        (await env.DB.prepare("SELECT 1 FROM contacts WHERE user_id = ? AND address = ? LIMIT 1")
+          .bind(userId, fromAddr)
+          .first());
+      if (!known) {
+        const verdict = await classifySpam(env, {
+          from: `${fromName} <${fromAddr}>`,
+          subject: parsed.subject || "",
+          text: bodyText,
+        });
+        if (verdict?.spam && verdict.score >= 0.7) {
+          folder = "spam";
+          console.log("ai-spam", fromAddr, verdict.score, verdict.reason);
+        }
       }
     }
   }
