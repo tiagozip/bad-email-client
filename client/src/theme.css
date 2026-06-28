@@ -3038,9 +3038,9 @@ html[data-theme="sakura"] {
   gap: var(--em-2);
 }
 
-.em-rule-row .kumo-input {
+.em-rule-row > input {
   flex: 1;
-  min-width: 80px;
+  min-width: 0;
 }
 
 .em-label-foot {
