@@ -31,6 +31,16 @@ export async function checkSendingDns(domain) {
   return { spf, dkim, ok: spf && dkim };
 }
 
+export async function checkOwnership(domain, token) {
+  if (!token) return false;
+  try {
+    const txt = await lookupTxt(`_estrogen.${domain}`);
+    return txt.some((t) => t.includes(String(token).toLowerCase()));
+  } catch {
+    return false;
+  }
+}
+
 export async function lookupMx(domain) {
   const res = await fetch(
     `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=MX`,
@@ -64,8 +74,8 @@ export async function reverifyAllDomains(env) {
     } catch {
       continue;
     }
-    const verified = mx.routesToCloudflare ? 1 : 0;
-    const sendVerified = sending.ok ? 1 : 0;
+    const verified = mx.routesToCloudflare && d.verified ? 1 : 0;
+    const sendVerified = sending.ok && d.send_verified ? 1 : 0;
     const pub = verified ? d.public : 0;
     if (verified === d.verified && sendVerified === d.send_verified && pub === d.public) continue;
     await env.DB.prepare(

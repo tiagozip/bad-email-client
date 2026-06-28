@@ -1028,10 +1028,12 @@ function DomainSetupModal({ open, existing, onClose, onDone }) {
         {step === 2 && (
           <div className="em-setup-body">
             <p className="em-card-sub">
-              Add these DNS records for <b>{dom}</b>. If its DNS is on Cloudflare, just turn on{" "}
-              <b>Email Routing</b> and <b>Email Sending</b> for it and Cloudflare adds them all for
-              you, then come back and verify.
+              Add these DNS records for <b>{dom}</b>. The ownership record proves the domain is
+              yours. The MX/SPF/DKIM records are added automatically if you turn on Cloudflare{" "}
+              <b>Email Routing</b> + <b>Email Sending</b> for it.
             </p>
+            <div className="em-setup-section">Prove ownership (TXT, host _estrogen.{dom})</div>
+            <CopyField label="TXT" value={created?.verifyToken || ""} />
             <div className="em-setup-section">Receiving — MX records (host {dom})</div>
             <CopyField label="MX" value="route1.mx.cloudflare.net" />
             <CopyField label="MX" value="route2.mx.cloudflare.net" />
@@ -1061,6 +1063,9 @@ function DomainSetupModal({ open, existing, onClose, onDone }) {
               leave this open.
             </p>
             <div className="em-dns-check">
+              <span className={result?.owns ? "is-ok" : "is-bad"}>
+                {result?.owns ? "✓" : busy && !result ? "•" : "✗"} Ownership (TXT)
+              </span>
               <span className={result?.verified ? "is-ok" : "is-bad"}>
                 {result?.verified ? "✓" : busy && !result ? "•" : "✗"} Receiving (MX)
               </span>
@@ -1123,7 +1128,7 @@ function Domains() {
   }, []);
 
   function openSetup(d) {
-    setSetupExisting(d ? { id: d.id, domain: d.domain } : null);
+    setSetupExisting(d ? { id: d.id, domain: d.domain, verifyToken: d.verifyToken } : null);
     setSetupOpen(true);
   }
 

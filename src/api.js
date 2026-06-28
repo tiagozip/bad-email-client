@@ -9,7 +9,7 @@ import {
   sha256Hex,
 } from "./auth.js";
 import { encryptBytes, tryDecryptBytes, tryDecryptText } from "./crypto.js";
-import { checkSendingDns, lookupMx } from "./domains.js";
+import { checkOwnership, checkSendingDns, lookupMx } from "./domains.js";
 import {
   authorizeUrl,
   challengeFor,
@@ -1303,7 +1303,7 @@ export async function handleApi(request, env, ctx) {
 
   if (path === "/api/domains" && method === "GET") {
     const res = await env.DB.prepare(
-      "SELECT id, domain, verified, send_verified, public, public_pending, created_at FROM domains WHERE owner_id = ? ORDER BY created_at DESC",
+      "SELECT id, domain, verified, send_verified, public, public_pending, verify_token, created_at FROM domains WHERE owner_id = ? ORDER BY created_at DESC",
     )
       .bind(user.id)
       .all();
@@ -1314,6 +1314,7 @@ export async function handleApi(request, env, ctx) {
       sendVerified: !!r.send_verified,
       public: !!r.public,
       publicPending: !!r.public_pending,
+      verifyToken: r.verify_token || "",
       createdAt: r.created_at,
       builtIn: false,
     }));
@@ -1349,32 +1350,48 @@ export async function handleApi(request, env, ctx) {
       .first();
     if (exists) return error(409, "you already added this domain");
     const id = uuid();
+    const verifyToken = randomToken(16);
     await env.DB.prepare(
-      "INSERT INTO domains (id, domain, verified, owner_id, created_at, added_by) VALUES (?,?,0,?,?,?)",
+      "INSERT INTO domains (id, domain, verified, owner_id, verify_token, created_at, added_by) VALUES (?,?,0,?,?,?,?)",
     )
-      .bind(id, domain, user.id, now(), user.id)
+      .bind(id, domain, user.id, verifyToken, now(), user.id)
       .run();
-    return json({ id, domain, verified: false, public: false, createdAt: now(), builtIn: false });
+    return json({
+      id,
+      domain,
+      verified: false,
+      public: false,
+      verifyToken,
+      createdAt: now(),
+      builtIn: false,
+    });
   }
   if ((m = path.match(/^\/api\/domains\/([\w-]+)\/verify$/)) && method === "POST") {
-    const row = await env.DB.prepare("SELECT id, domain FROM domains WHERE id = ? AND owner_id = ?")
+    const row = await env.DB.prepare(
+      "SELECT id, domain, verify_token FROM domains WHERE id = ? AND owner_id = ?",
+    )
       .bind(m[1], user.id)
       .first();
     if (!row) return error(404, "not found");
     let lookup;
     let sending;
+    let owns;
     try {
       lookup = await lookupMx(row.domain);
       sending = await checkSendingDns(row.domain);
+      owns = await checkOwnership(row.domain, row.verify_token);
     } catch {
       return error(502, "dns lookup failed, try again");
     }
+    const verified = owns && lookup.routesToCloudflare;
+    const sendVerified = owns && sending.ok;
     await env.DB.prepare("UPDATE domains SET verified = ?, send_verified = ? WHERE id = ?")
-      .bind(lookup.routesToCloudflare ? 1 : 0, sending.ok ? 1 : 0, row.id)
+      .bind(verified ? 1 : 0, sendVerified ? 1 : 0, row.id)
       .run();
     return json({
-      verified: lookup.routesToCloudflare,
-      sendVerified: sending.ok,
+      verified,
+      sendVerified,
+      owns,
       sending,
       records: lookup.records,
     });

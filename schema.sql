@@ -143,6 +143,7 @@ CREATE TABLE IF NOT EXISTS domains (
   public INTEGER NOT NULL DEFAULT 0,
   public_pending INTEGER NOT NULL DEFAULT 0,
   owner_id TEXT,
+  verify_token TEXT,
   created_at INTEGER NOT NULL,
   added_by TEXT
 );
