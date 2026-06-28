@@ -2,12 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 import * as pgp from "../pgp.js";
 import { useMailStore } from "../store.js";
+import { notify, notifyError } from "../toast.js";
 import { recipientLine } from "../util.js";
 import { Admin } from "./Admin.jsx";
 import { Compose } from "./Compose.jsx";
 import { E2EPrompt, shouldPromptE2E } from "./E2EPrompt.jsx";
 import { MailSidebar } from "./MailSidebar.jsx";
 import { MessageList } from "./MessageList.jsx";
+import { ScheduledView } from "./ScheduledView.jsx";
 import { Settings } from "./Settings.jsx";
 import { Shortcuts } from "./Shortcuts.jsx";
 import { ThreadView } from "./ThreadView.jsx";
@@ -26,7 +28,8 @@ function pathFor(view, openId) {
 function parsePath(pathname) {
   const seg = pathname.replace(/^\/+|\/+$/g, "").split("/");
   if (seg[0] === "message" && seg[1]) return { openId: decodeURIComponent(seg[1]) };
-  if (seg[0] === "label" && seg[1]) return { view: { kind: "label", labelId: decodeURIComponent(seg[1]) } };
+  if (seg[0] === "label" && seg[1])
+    return { view: { kind: "label", labelId: decodeURIComponent(seg[1]) } };
   if (seg[0] === "search" && seg[1])
     return { view: { kind: "search", q: decodeURIComponent(seg.slice(1).join("/")) } };
   if (seg[0] === "starred") return { view: { kind: "starred" } };
@@ -55,8 +58,10 @@ export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [cursor, setCursor] = useState(-1);
+  const [undoBar, setUndoBar] = useState(null);
   const searchRef = useRef(null);
   const gPressed = useRef(false);
+  const undoTimer = useRef(null);
 
   const openCompose = useCallback((initial) => {
     setComposeInitial(initial || null);
@@ -88,7 +93,10 @@ export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }
     if (parsed.openId) {
       api
         .message(parsed.openId)
-        .then((d) => d?.message && store.openMessage({ id: d.message.id, threadId: d.message.threadId }))
+        .then(
+          (d) =>
+            d?.message && store.openMessage({ id: d.message.id, threadId: d.message.threadId }),
+        )
         .catch(() => {});
     } else if (parsed.view && !(parsed.view.kind === "folder" && parsed.view.folder === "inbox")) {
       store.goView(parsed.view);
@@ -104,7 +112,10 @@ export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }
 
   function startReply(msg, kind) {
     const re = /^re:/i.test(msg.subject || "") ? msg.subject : `Re: ${msg.subject || ""}`;
-    const toList = kind === "replyAll" ? [msg.from?.address, ...(msg.to || []).map((t) => t.address)] : [msg.from?.address];
+    const toList =
+      kind === "replyAll"
+        ? [msg.from?.address, ...(msg.to || []).map((t) => t.address)]
+        : [msg.from?.address];
     const ccList = kind === "replyAll" ? (msg.cc || []).map((c) => c.address) : [];
     const dedup = [...new Set(toList.filter((a) => a && a !== user.address))];
     openCompose({
@@ -230,6 +241,33 @@ export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }
     store.refreshCounts();
   }
 
+  function onComposeSent(resp) {
+    afterMutation();
+    if (resp?.scheduled && resp.undoMs > 0 && resp.id) {
+      clearTimeout(undoTimer.current);
+      setUndoBar({ id: resp.id });
+      undoTimer.current = setTimeout(() => setUndoBar(null), resp.undoMs);
+    }
+  }
+
+  async function undoSend() {
+    const id = undoBar?.id;
+    clearTimeout(undoTimer.current);
+    setUndoBar(null);
+    if (!id) return;
+    try {
+      await api.cancelScheduled(id);
+      notify("Send undone", "", "success");
+      afterMutation();
+    } catch (e) {
+      notifyError(e);
+    }
+  }
+
+  useEffect(() => {
+    return () => clearTimeout(undoTimer.current);
+  }, []);
+
   const goBack = useCallback(() => window.history.back(), []);
 
   const pushed = useRef({});
@@ -238,6 +276,7 @@ export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }
     compose: composeOpen,
     settings: settingsOpen,
     admin: screen === "admin",
+    scheduled: screen === "scheduled",
   };
   useEffect(() => {
     for (const k of Object.keys(navState)) {
@@ -255,6 +294,7 @@ export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }
       if (composeOpen) return setComposeOpen(false);
       if (settingsOpen) return setSettingsOpen(false);
       if (screen === "admin") return setScreen("mail");
+      if (screen === "scheduled") return setScreen("mail");
       if (store.openId) {
         store.closeMessage();
         setCursor(-1);
@@ -286,6 +326,10 @@ export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }
             setSidebarOpen(false);
             setScreen("admin");
           }}
+          onOpenScheduled={() => {
+            setSidebarOpen(false);
+            setScreen("scheduled");
+          }}
           onSignOut={signOut}
           onNavigate={() => setSidebarOpen(false)}
         />
@@ -293,6 +337,8 @@ export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }
 
       {screen === "admin" ? (
         <Admin onBack={goBack} />
+      ) : screen === "scheduled" ? (
+        <ScheduledView onBack={goBack} />
       ) : (
         <div className="em-main">
           <div className="em-column">
@@ -334,8 +380,16 @@ export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }
         initial={composeInitial}
         user={user}
         onClose={goBack}
-        onSent={afterMutation}
+        onSent={onComposeSent}
       />
+      {undoBar && (
+        <div className="em-undobar">
+          <span className="em-undobar-text">Message sent</span>
+          <button type="button" className="em-undobar-btn" onClick={undoSend}>
+            Undo
+          </button>
+        </div>
+      )}
       {showHelp && <Shortcuts onClose={() => setShowHelp(false)} />}
       {e2ePrompt && !user.pgpEnabled && (
         <E2EPrompt user={user} setUser={setUser} onClose={() => setE2ePrompt(false)} />

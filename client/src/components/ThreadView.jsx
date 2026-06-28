@@ -1,17 +1,17 @@
 import { Button, DropdownMenu, Input, Loader, Tooltip } from "@cloudflare/kumo";
 import {
   Archive,
-  ArrowBendUpLeft,
   ArrowBendDoubleUpLeft,
+  ArrowBendUpLeft,
   ArrowLeft,
   ArrowRight,
+  Clock,
   DotsThree,
   DownloadSimple,
   Envelope,
   FileArrowDown,
-  Printer,
-  File as FileIcon,
   FileDoc,
+  File as FileIcon,
   FileImage,
   FilePdf,
   FileText,
@@ -20,18 +20,18 @@ import {
   Lock,
   LockKeyOpen,
   PaperPlaneTilt,
+  Printer,
   ShieldCheck,
   Star,
   Trash,
   Tray,
   Warning,
 } from "@phosphor-icons/react";
-import { useEffect, useRef, useState } from "react";
 import { sanitize } from "lettersanitizer";
+import { useEffect, useRef, useState } from "react";
 import { Letter } from "react-letter";
 import { api } from "../api.js";
 import * as pgp from "../pgp.js";
-import { RichEditor } from "./RichEditor.jsx";
 import { notifyError } from "../toast.js";
 import {
   escapeHtml,
@@ -45,8 +45,10 @@ import {
   monoColor,
   recipientLine,
   relativeTime,
+  snoozePresets,
   splitQuoted,
 } from "../util.js";
+import { RichEditor } from "./RichEditor.jsx";
 
 const ALLOWED_SCHEMAS = ["http", "https", "mailto", "cid", "tel", "data"];
 
@@ -519,6 +521,7 @@ export function ThreadView({ store, onReply, onForward, onBack }) {
     messages,
     toggleStar,
     moveMessage,
+    snooze,
     setReadState,
     deleteForever,
     setThread,
@@ -736,6 +739,20 @@ export function ThreadView({ store, onReply, onForward, onBack }) {
             <DropdownMenu.Item icon={Envelope} onClick={() => setReadState(headerItem, false)}>
               Mark unread
             </DropdownMenu.Item>
+            <DropdownMenu.Sub>
+              <DropdownMenu.SubTrigger icon={Clock}>Snooze</DropdownMenu.SubTrigger>
+              <DropdownMenu.SubContent>
+                {snoozePresets().map((p) => (
+                  <DropdownMenu.Item key={p.key} onClick={() => snooze(headerItem, p.until)}>
+                    <span className="em-snooze-item">
+                      <span>{p.label}</span>
+                      <span className="em-snooze-when">{fullDate(p.until)}</span>
+                    </span>
+                  </DropdownMenu.Item>
+                ))}
+              </DropdownMenu.SubContent>
+            </DropdownMenu.Sub>
+            <DropdownMenu.Separator />
             <DropdownMenu.Item icon={Printer} onClick={() => printMessage(last)}>
               Print
             </DropdownMenu.Item>

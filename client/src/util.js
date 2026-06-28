@@ -163,7 +163,10 @@ export function splitQuoted(text) {
       cut = i;
       break;
     }
-    if (/^\s*On .+wrote:\s*$/.test(line) || /^\s*-{2,}\s*(Original Message|Forwarded message)/i.test(line)) {
+    if (
+      /^\s*On .+wrote:\s*$/.test(line) ||
+      /^\s*-{2,}\s*(Original Message|Forwarded message)/i.test(line)
+    ) {
       cut = i;
       break;
     }
@@ -188,7 +191,7 @@ export function plainBodyToHtml(text) {
   const str = String(text || "");
   if (!str.trim()) return "";
   const lines = str.replace(/^\n+/, "").split("\n");
-  const out = ['<p></p>'];
+  const out = ["<p></p>"];
   const block = [];
   for (const line of lines) {
     block.push(escapeHtml(line.replace(/^>\s?/, "")));
@@ -220,7 +223,61 @@ export const FOLDER_LABELS = {
   archive: "Archive",
   spam: "Spam",
   trash: "Trash",
+  snoozed: "Snoozed",
 };
+
+function atHour(date, hour) {
+  const d = new Date(date);
+  d.setHours(hour, 0, 0, 0);
+  return d.getTime();
+}
+
+export function snoozePresets(now = new Date()) {
+  const laterToday = now.getTime() + 3 * 60 * 60 * 1000;
+
+  let evening = atHour(now, 19);
+  if (evening <= now.getTime()) {
+    const t = new Date(now);
+    t.setDate(t.getDate() + 1);
+    evening = atHour(t, 19);
+  }
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const saturday = new Date(now);
+  const toSat = (6 - saturday.getDay() + 7) % 7 || 7;
+  saturday.setDate(saturday.getDate() + toSat);
+
+  const monday = new Date(now);
+  const toMon = (1 - monday.getDay() + 7) % 7 || 7;
+  monday.setDate(monday.getDate() + toMon);
+
+  return [
+    { key: "later", label: "Later today", until: laterToday },
+    { key: "evening", label: "This evening", until: evening },
+    { key: "tomorrow", label: "Tomorrow", until: atHour(tomorrow, 8) },
+    { key: "weekend", label: "This weekend", until: atHour(saturday, 8) },
+    { key: "nextweek", label: "Next week", until: atHour(monday, 8) },
+  ];
+}
+
+export function sendLaterPresets(now = new Date()) {
+  const inHour = now.getTime() + 60 * 60 * 1000;
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const monday = new Date(now);
+  const toMon = (1 - monday.getDay() + 7) % 7 || 7;
+  monday.setDate(monday.getDate() + toMon);
+
+  return [
+    { key: "hour", label: "In 1 hour", sendAt: inHour },
+    { key: "tomorrow", label: "Tomorrow 8am", sendAt: atHour(tomorrow, 8) },
+    { key: "nextweek", label: "Next week", sendAt: atHour(monday, 8) },
+  ];
+}
 
 const QUOTA = 500 * 1024 * 1024;
 export const STORAGE_QUOTA = QUOTA;

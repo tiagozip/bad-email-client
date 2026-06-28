@@ -131,7 +131,9 @@ export function useMailStore(initialUser) {
         .then((d) => {
           setThread({ threadId: item.threadId, messages: d.messages || [] });
           setMessages((prev) =>
-            prev.map((m) => (m.threadId === item.threadId && m.folder !== "sent" ? { ...m, isRead: true } : m)),
+            prev.map((m) =>
+              m.threadId === item.threadId && m.folder !== "sent" ? { ...m, isRead: true } : m,
+            ),
           );
           refreshCounts();
         })
@@ -148,15 +150,12 @@ export function useMailStore(initialUser) {
     });
   }, []);
 
-  const reloadThread = useCallback(
-    (threadId, images) => {
-      api
-        .thread(threadId)
-        .then((d) => setThread({ threadId, messages: d.messages || [] }))
-        .catch(notifyError);
-    },
-    [],
-  );
+  const reloadThread = useCallback((threadId, images) => {
+    api
+      .thread(threadId)
+      .then((d) => setThread({ threadId, messages: d.messages || [] }))
+      .catch(notifyError);
+  }, []);
 
   const patchMessage = useCallback((id, patch) => {
     setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
@@ -205,6 +204,24 @@ export function useMailStore(initialUser) {
       }
       api
         .moveMessage(item.id, folder)
+        .then(() => refreshCounts())
+        .catch((e) => {
+          notifyError(e);
+          loadList(view);
+        });
+    },
+    [removeFromList, openId, refreshCounts, loadList, view],
+  );
+
+  const snooze = useCallback(
+    (item, until) => {
+      removeFromList([item.id]);
+      if (openId === item.id) {
+        setOpenId(null);
+        setThread(null);
+      }
+      api
+        .snoozeMessage(item.id, until)
         .then(() => refreshCounts())
         .catch((e) => {
           notifyError(e);
@@ -303,6 +320,7 @@ export function useMailStore(initialUser) {
     toggleStar,
     setReadState,
     moveMessage,
+    snooze,
     deleteForever,
     bulkAction,
     patchMessage,

@@ -1,14 +1,15 @@
-import { Button, Dialog, DialogRoot, Input, Loader, Select } from "@cloudflare/kumo";
+import { Button, Dialog, DialogRoot, DropdownMenu, Input, Loader, Select } from "@cloudflare/kumo";
 import {
-  File as FileIcon,
+  CaretDown,
   FileDoc,
+  File as FileIcon,
   FileImage,
   FilePdf,
   FileText,
   FileZip,
   Lock,
-  PaperPlaneTilt,
   Paperclip,
+  PaperPlaneTilt,
   Trash,
   X,
 } from "@phosphor-icons/react";
@@ -16,14 +17,23 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api.js";
 import * as pgp from "../pgp.js";
 import { notify, notifyError } from "../toast.js";
-import { humanSize, initials, monoColor, parseRecipients, plainBodyToHtml } from "../util.js";
+import {
+  fullDate,
+  humanSize,
+  initials,
+  monoColor,
+  parseRecipients,
+  plainBodyToHtml,
+  sendLaterPresets,
+} from "../util.js";
 import { RichEditor } from "./RichEditor.jsx";
 
 function attIcon(mime) {
   const m = mime || "";
   if (m.startsWith("image/")) return FileImage;
   if (m === "application/pdf") return FilePdf;
-  if (m.includes("zip") || m.includes("compressed") || m.includes("tar") || m.includes("rar")) return FileZip;
+  if (m.includes("zip") || m.includes("compressed") || m.includes("tar") || m.includes("rar"))
+    return FileZip;
   if (m.includes("word") || m.includes("opendocument.text") || m.includes("msword")) return FileDoc;
   if (m.startsWith("text/")) return FileText;
   return FileIcon;
@@ -38,7 +48,10 @@ function RecipientField({ label, value, onChange, autoFocus }) {
   const inputRef = useRef(null);
 
   const tokens = value.split(",");
-  const recipients = tokens.slice(0, -1).map((s) => s.trim()).filter(Boolean);
+  const recipients = tokens
+    .slice(0, -1)
+    .map((s) => s.trim())
+    .filter(Boolean);
   const draft = (tokens[tokens.length - 1] || "").replace(/^\s+/, "");
 
   function queueSuggest(d) {
@@ -69,7 +82,9 @@ function RecipientField({ label, value, onChange, autoFocus }) {
   }
 
   function commit(addr) {
-    const a = String(addr ?? draft).trim().replace(/,+$/, "");
+    const a = String(addr ?? draft)
+      .trim()
+      .replace(/,+$/, "");
     if (!a) return;
     onChange(`${[...recipients, a].join(", ")}, `);
     setSuggestions([]);
@@ -169,7 +184,10 @@ function RecipientField({ label, value, onChange, autoFocus }) {
                   {c.avatar ? (
                     <img className="em-suggest-avatar" src={c.avatar} alt="" />
                   ) : (
-                    <span className="em-suggest-avatar em-suggest-mono" style={{ background: monoColor(c.address) }}>
+                    <span
+                      className="em-suggest-avatar em-suggest-mono"
+                      style={{ background: monoColor(c.address) }}
+                    >
                       {initials({ name: c.name, address: c.address })}
                     </span>
                   )}
@@ -317,10 +335,8 @@ export function Compose({ open, initial, user, onClose, onSent }) {
 
   const pendingAtts = atts.length > 0;
   const bccFilled = parseRecipients(bcc).length > 0;
-  const keysReady =
-    recipientAddrs.length > 0 && recipientAddrs.every((addr) => !!keyMap[addr]);
-  const canE2E =
-    user.pgpEnabled === true && keysReady && !bccFilled && !pendingAtts;
+  const keysReady = recipientAddrs.length > 0 && recipientAddrs.every((addr) => !!keyMap[addr]);
+  const canE2E = user.pgpEnabled === true && keysReady && !bccFilled && !pendingAtts;
 
   async function saveDraft() {
     const payload = {
@@ -343,7 +359,14 @@ export function Compose({ open, initial, user, onClose, onSent }) {
 
   async function uploadFile(file) {
     const tmpId = `pending-${Math.random()}`;
-    const tmp = { id: tmpId, filename: file.name, mime: file.type, size: file.size, pending: true, file };
+    const tmp = {
+      id: tmpId,
+      filename: file.name,
+      mime: file.type,
+      size: file.size,
+      pending: true,
+      file,
+    };
     setAtts((p) => [...p, tmp]);
     try {
       const d = await api.uploadAttachment(file);
@@ -384,7 +407,11 @@ export function Compose({ open, initial, user, onClose, onSent }) {
     }
     if (!files.length) return;
     await uploadFiles(files);
-    notify("Image attached", files.length > 1 ? `${files.length} pasted images attached.` : "Pasted image attached.", "success");
+    notify(
+      "Image attached",
+      files.length > 1 ? `${files.length} pasted images attached.` : "Pasted image attached.",
+      "success",
+    );
   }
 
   function onDragEnter(e) {
@@ -421,7 +448,21 @@ export function Compose({ open, initial, user, onClose, onSent }) {
     if (!att.pending) await api.deleteAttachment(att.id).catch(() => {});
   }
 
-  async function onSend() {
+  function announce(resp, recipients, encrypted, sendAt) {
+    if (resp?.scheduled && resp.undoMs > 0 && !sendAt) return;
+    if (sendAt || resp?.scheduled) {
+      notify("Scheduled", `Will send ${fullDate(sendAt || resp?.sendAt)}.`, "success");
+      return;
+    }
+    const more = recipients.length > 1 ? ` +${recipients.length - 1}` : "";
+    notify(
+      "Sent",
+      `${encrypted ? "Encrypted message" : "Message"} to ${recipients[0]}${more} sent.`,
+      "success",
+    );
+  }
+
+  async function onSend(sendAt) {
     const recipients = parseRecipients(to);
     if (!recipients.length) {
       notify("Add a recipient", "The To field is empty.", "warning");
@@ -445,12 +486,16 @@ export function Compose({ open, initial, user, onClose, onSent }) {
           ownKeyRef.current = own?.publicKey || null;
         }
         if (!ownKeyRef.current) {
-          notify("Cannot encrypt", "Your own encryption key is unavailable. Message not sent.", "warning");
+          notify(
+            "Cannot encrypt",
+            "Your own encryption key is unavailable. Message not sent.",
+            "warning",
+          );
           return;
         }
         const editorText = editorRef.current?.getText?.() ?? bodyText;
         const armored = await pgp.encryptFor([...recipientKeys, ownKeyRef.current], editorText);
-        await api.send({
+        const resp = await api.send({
           from,
           to: recipients,
           cc: parseRecipients(cc),
@@ -460,18 +505,15 @@ export function Compose({ open, initial, user, onClose, onSent }) {
           inReplyTo: meta.inReplyTo,
           references: meta.references || [],
           draftId: draftIdRef.current || undefined,
+          ...(sendAt ? { sendAt, skipUndo: true } : {}),
         });
-        notify(
-          "Sent",
-          `Encrypted message to ${recipients[0]}${recipients.length > 1 ? ` +${recipients.length - 1}` : ""} sent.`,
-          "success",
-        );
-        onSent?.();
+        announce(resp, recipients, true, sendAt);
+        onSent?.(resp);
         onClose();
         return;
       }
       const html = bodyText.trim() ? bodyHtml : "";
-      await api.send({
+      const resp = await api.send({
         from,
         to: recipients,
         cc: parseRecipients(cc),
@@ -483,9 +525,10 @@ export function Compose({ open, initial, user, onClose, onSent }) {
         references: meta.references || [],
         attachmentIds: atts.filter((a) => !a.pending).map((a) => a.id),
         draftId: draftIdRef.current || undefined,
+        ...(sendAt ? { sendAt, skipUndo: true } : {}),
       });
-      notify("Sent", `Message to ${recipients[0]}${recipients.length > 1 ? ` +${recipients.length - 1}` : ""} sent.`, "success");
-      onSent?.();
+      announce(resp, recipients, false, sendAt);
+      onSent?.(resp);
       onClose();
     } catch (e) {
       notifyError(e);
@@ -503,7 +546,8 @@ export function Compose({ open, initial, user, onClose, onSent }) {
 
   async function onDiscard() {
     if (draftIdRef.current) await api.deleteMessage(draftIdRef.current).catch(() => {});
-    for (const a of atts.filter((x) => !x.pending)) await api.deleteAttachment(a.id).catch(() => {});
+    for (const a of atts.filter((x) => !x.pending))
+      await api.deleteAttachment(a.id).catch(() => {});
     onSent?.();
     onClose();
   }
@@ -534,7 +578,12 @@ export function Compose({ open, initial, user, onClose, onSent }) {
           <div className="em-compose-from">
             <label>From</label>
             {multiAddr ? (
-              <Select aria-label="From address" size="sm" value={from} onValueChange={(v) => setFrom(v)}>
+              <Select
+                aria-label="From address"
+                size="sm"
+                value={from}
+                onValueChange={(v) => setFrom(v)}
+              >
                 {addresses.map((a) => (
                   <Select.Option key={a.address} value={a.address}>
                     {a.address}
@@ -598,9 +647,16 @@ export function Compose({ open, initial, user, onClose, onSent }) {
                     </span>
                     <span className="em-pending-meta">
                       <span className="em-pending-name">{a.filename}</span>
-                      <span className="em-pending-size">{a.pending ? "Uploading…" : humanSize(a.size)}</span>
+                      <span className="em-pending-size">
+                        {a.pending ? "Uploading…" : humanSize(a.size)}
+                      </span>
                     </span>
-                    <button type="button" className="em-pending-x" aria-label="Remove" onClick={() => removeAtt(a)}>
+                    <button
+                      type="button"
+                      className="em-pending-x"
+                      aria-label="Remove"
+                      onClick={() => removeAtt(a)}
+                    >
                       <X size={12} />
                     </button>
                   </span>
@@ -612,9 +668,34 @@ export function Compose({ open, initial, user, onClose, onSent }) {
 
         <input ref={fileRef} type="file" multiple hidden onChange={onPickFiles} />
         <div className="em-compose-actions">
-          <Button variant="primary" icon={PaperPlaneTilt} loading={busy} onClick={onSend}>
+          <Button variant="primary" icon={PaperPlaneTilt} loading={busy} onClick={() => onSend()}>
             Send
           </Button>
+          <DropdownMenu>
+            <DropdownMenu.Trigger
+              render={(p) => (
+                <Button
+                  {...p}
+                  variant="primary"
+                  shape="square"
+                  aria-label="Send later"
+                  icon={CaretDown}
+                  disabled={busy}
+                />
+              )}
+            />
+            <DropdownMenu.Content>
+              <DropdownMenu.Label>Send later</DropdownMenu.Label>
+              {sendLaterPresets().map((p) => (
+                <DropdownMenu.Item key={p.key} onClick={() => onSend(p.sendAt)}>
+                  <span className="em-snooze-item">
+                    <span>{p.label}</span>
+                    <span className="em-snooze-when">{fullDate(p.sendAt)}</span>
+                  </span>
+                </DropdownMenu.Item>
+              ))}
+            </DropdownMenu.Content>
+          </DropdownMenu>
           <Button variant="outline" icon={Paperclip} onClick={() => fileRef.current?.click()}>
             Attach
           </Button>

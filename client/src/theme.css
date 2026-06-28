@@ -579,7 +579,9 @@ html[data-theme="sakura"] {
   background: color-mix(in srgb, var(--color-kumo-canvas) 78%, transparent);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  transition: border-color var(--em-fast), background var(--em-fast);
+  transition:
+    border-color var(--em-fast),
+    background var(--em-fast);
 }
 
 .em-floatbar-search:focus-within {
@@ -834,7 +836,10 @@ html[data-theme="sakura"] {
   align-items: center;
   border-radius: var(--em-radius-sm);
   opacity: 0;
-  transition: color var(--em-fast), opacity var(--em-fast), background var(--em-fast);
+  transition:
+    color var(--em-fast),
+    opacity var(--em-fast),
+    background var(--em-fast);
 }
 
 .em-row:hover .em-star-btn,
@@ -1247,7 +1252,9 @@ html[data-theme="sakura"] {
   text-decoration: none;
   color: var(--text-color-kumo-default);
   background: var(--color-kumo-base);
-  transition: background var(--em-fast), border-color var(--em-fast);
+  transition:
+    background var(--em-fast),
+    border-color var(--em-fast);
 }
 
 .em-att-chip:hover {
@@ -1578,7 +1585,9 @@ html[data-theme="sakura"] {
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--text-color-kumo-subtle);
-  transition: background var(--em-fast), color var(--em-fast);
+  transition:
+    background var(--em-fast),
+    color var(--em-fast);
 }
 
 .em-settings-nav:hover {
@@ -2231,7 +2240,9 @@ html[data-theme="sakura"] {
   border-radius: 4px;
   cursor: pointer;
   color: var(--text-color-kumo-subtle);
-  transition: background var(--em-fast), color var(--em-fast);
+  transition:
+    background var(--em-fast),
+    color var(--em-fast);
 }
 
 .em-recip-chip button:hover {
@@ -2667,7 +2678,9 @@ html[data-theme="sakura"] {
   width: 100%;
   font-weight: 600 !important;
   letter-spacing: -0.005em;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18), 0 1px 0 rgba(255, 255, 255, 0.14) inset;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.18),
+    0 1px 0 rgba(255, 255, 255, 0.14) inset;
 }
 
 .em-account-chip {
@@ -2787,7 +2800,9 @@ html[data-theme="sakura"] {
   background: var(--color-kumo-base);
   cursor: pointer;
   text-align: left;
-  transition: border-color var(--em-fast), background var(--em-fast);
+  transition:
+    border-color var(--em-fast),
+    background var(--em-fast);
 }
 
 .em-theme-swatch:hover {
@@ -3065,7 +3080,8 @@ html[data-theme="sakura"] {
 }
 
 @keyframes em-skel-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -3138,7 +3154,9 @@ html[data-theme="sakura"] {
   font-size: 0.95rem;
   font-weight: 500;
   color: var(--text-color-kumo-subtle);
-  transition: background var(--em-fast), color var(--em-fast);
+  transition:
+    background var(--em-fast),
+    color var(--em-fast);
 }
 
 .em-nav-item:hover {
@@ -3226,7 +3244,10 @@ html[data-theme="sakura"] {
   color: var(--text-color-kumo-inactive);
   cursor: pointer;
   opacity: 0;
-  transition: opacity var(--em-fast), color var(--em-fast), background var(--em-fast);
+  transition:
+    opacity var(--em-fast),
+    color var(--em-fast),
+    background var(--em-fast);
 }
 
 .em-nav-labelrow:hover .em-label-edit {
@@ -3289,7 +3310,9 @@ html[data-theme="sakura"] {
   border: 2px solid transparent;
   border-radius: var(--em-radius-sm);
   cursor: pointer;
-  transition: transform var(--em-fast), border-color var(--em-fast);
+  transition:
+    transform var(--em-fast),
+    border-color var(--em-fast);
 }
 
 .em-swatch:hover {
@@ -3321,7 +3344,9 @@ html[data-theme="sakura"] {
   font-weight: 500;
   color: var(--text-color-kumo-subtle);
   cursor: pointer;
-  transition: background var(--em-fast), color var(--em-fast);
+  transition:
+    background var(--em-fast),
+    color var(--em-fast);
 }
 
 .em-rule-toggle.is-active {
@@ -3591,6 +3616,138 @@ a:focus-visible,
   outline: 2px solid var(--color-kumo-brand);
   outline-offset: 2px;
   border-radius: 5px;
+}
+
+.em-snooze-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 168px;
+}
+
+.em-snooze-when {
+  font-size: 0.74rem;
+  color: var(--text-color-kumo-subtle);
+}
+
+.em-undobar {
+  position: fixed;
+  bottom: 92px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 220;
+  display: flex;
+  align-items: center;
+  gap: var(--em-4);
+  height: 48px;
+  padding: 0 var(--em-3) 0 var(--em-5);
+  border-radius: 999px;
+  border: 1px solid var(--color-kumo-line);
+  background: color-mix(in srgb, var(--color-kumo-canvas) 88%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  animation: em-slidein var(--em-med);
+}
+
+.em-undobar-text {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-color-kumo-default);
+}
+
+.em-undobar-btn {
+  border: none;
+  background: var(--em-brand-soft);
+  color: var(--text-color-kumo-brand);
+  font-size: 0.88rem;
+  font-weight: 600;
+  height: 34px;
+  padding: 0 var(--em-4);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background var(--em-fast);
+}
+
+.em-undobar-btn:hover {
+  background: var(--em-brand-soft-border);
+}
+
+.em-segment {
+  display: inline-flex;
+  gap: var(--em-1);
+  padding: var(--em-1);
+  border: 1px solid var(--color-kumo-line);
+  border-radius: var(--em-radius);
+  background: var(--color-kumo-recessed);
+}
+
+.em-segment-btn {
+  border: none;
+  background: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-color-kumo-subtle);
+  padding: var(--em-2) var(--em-4);
+  border-radius: var(--em-radius-sm);
+  cursor: pointer;
+  transition:
+    background var(--em-fast),
+    color var(--em-fast);
+}
+
+.em-segment-btn:hover {
+  color: var(--text-color-kumo-default);
+}
+
+.em-segment-btn.is-active {
+  background: var(--color-kumo-brand);
+  color: #fff;
+}
+
+.em-sched-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.em-sched-row {
+  display: flex;
+  align-items: center;
+  gap: var(--em-4);
+  padding: var(--em-3) 0;
+  border-bottom: 1px solid var(--color-kumo-line);
+}
+
+.em-sched-row:last-child {
+  border-bottom: none;
+}
+
+.em-sched-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.em-sched-to {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-color-kumo-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.em-sched-subject {
+  font-size: 0.84rem;
+  color: var(--text-color-kumo-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.em-sched-when {
+  font-size: 0.8rem;
+  color: var(--text-color-kumo-subtle);
+  white-space: nowrap;
+  flex: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

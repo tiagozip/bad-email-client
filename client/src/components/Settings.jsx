@@ -431,11 +431,7 @@ function HiddenAliases() {
                   title="Copy address"
                 >
                   <span>{a.address}</span>
-                  {copied === a.address ? (
-                    <Check size={14} weight="bold" />
-                  ) : (
-                    <Copy size={14} />
-                  )}
+                  {copied === a.address ? <Check size={14} weight="bold" /> : <Copy size={14} />}
                 </button>
                 <div className="em-hidden-meta">
                   {a.label && <span className="em-hidden-label">{a.label}</span>}
@@ -993,15 +989,22 @@ function DomainSetupModal({ open, existing, onClose, onDone }) {
       <div className="em-modal-panel em-setup-dialog">
         <div className="em-label-head">
           <h2 className="em-label-title">Add a domain</h2>
-          <Button size="sm" variant="ghost" shape="square" aria-label="Close" icon={X} onClick={onClose} />
+          <Button
+            size="sm"
+            variant="ghost"
+            shape="square"
+            aria-label="Close"
+            icon={X}
+            onClick={onClose}
+          />
         </div>
         <div className="em-setup-progress">Step {step} of 3</div>
 
         {step === 1 && (
           <div className="em-setup-body">
             <p className="em-card-sub">
-              Enter the domain you want to send and receive mail on. It needs to be on the Cloudflare
-              account that runs this server.
+              Enter the domain you want to send and receive mail on. It needs to be on the
+              Cloudflare account that runs this server.
             </p>
             <Input
               autoFocus
@@ -1042,8 +1045,9 @@ function DomainSetupModal({ open, existing, onClose, onDone }) {
             <CopyField label="TXT" value="v=spf1 include:_spf.mx.cloudflare.net ~all" />
             <div className="em-setup-section">Sending — DKIM</div>
             <p className="em-setup-note">
-              The DKIM record is unique to your domain. Turn on Email Sending for {dom} in Cloudflare
-              (Email → Email Sending → onboard) and it adds the DKIM record automatically.
+              The DKIM record is unique to your domain. Turn on Email Sending for {dom} in
+              Cloudflare (Email → Email Sending → onboard) and it adds the DKIM record
+              automatically.
             </p>
             <div className="em-label-foot">
               <Button variant="ghost" onClick={() => setStep(1)}>
@@ -1077,7 +1081,9 @@ function DomainSetupModal({ open, existing, onClose, onDone }) {
               </span>
             </div>
             {busy && !ready && <div className="em-setup-note">Checking DNS…</div>}
-            {ready && <div className="em-setup-success">Your domain is ready to send and receive.</div>}
+            {ready && (
+              <div className="em-setup-success">Your domain is ready to send and receive.</div>
+            )}
             <div className="em-label-foot">
               <Button variant="ghost" onClick={() => setStep(2)}>
                 Back
@@ -1291,6 +1297,7 @@ export function Settings({ open, user, setUser, mode, onSetMode, palette, onSetP
   const [imagesDefault, setImagesDefault] = useState(!!user.settings?.imagesDefault);
   const [catchAll, setCatchAll] = useState(!!user.settings?.catchAll);
   const [aiSpam, setAiSpam] = useState(user.settings?.aiSpam !== false);
+  const [undoSend, setUndoSend] = useState(user.settings?.undoSend || 0);
   const [busy, setBusy] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [section, setSection] = useState("account");
@@ -1332,7 +1339,7 @@ export function Settings({ open, user, setUser, mode, onSetMode, palette, onSetP
       const data = await api.saveSettings({
         displayName,
         signature,
-        settings: { ...user.settings, theme: mode, palette, imagesDefault, catchAll },
+        settings: { ...user.settings, theme: mode, palette, imagesDefault, catchAll, undoSend },
       });
       setUser(data.user);
       localStorage.setItem("em-images-default", imagesDefault ? "1" : "0");
@@ -1355,6 +1362,23 @@ export function Settings({ open, user, setUser, mode, onSetMode, palette, onSetP
       setUser(data.user);
     } catch (e) {
       setCatchAll(!v);
+      notifyError(e);
+    }
+  }
+
+  async function saveUndoSend(v) {
+    const n = Number(v) || 0;
+    const prev = undoSend;
+    setUndoSend(n);
+    try {
+      const data = await api.saveSettings({
+        displayName,
+        signature,
+        settings: { ...user.settings, theme: mode, palette, imagesDefault, catchAll, undoSend: n },
+      });
+      setUser(data.user);
+    } catch (e) {
+      setUndoSend(prev);
       notifyError(e);
     }
   }
@@ -1586,6 +1610,32 @@ export function Settings({ open, user, setUser, mode, onSetMode, palette, onSetP
                       checked={imagesDefault}
                       onCheckedChange={setImagesDefault}
                     />
+                  </div>
+                </div>
+
+                <div className="em-card">
+                  <div className="em-card-head">
+                    <h2 className="em-card-title">Undo send</h2>
+                    <p className="em-card-sub">
+                      Hold outgoing mail for a few seconds so you can take it back.
+                    </p>
+                  </div>
+                  <div className="em-segment">
+                    {[
+                      { v: 0, label: "Off" },
+                      { v: 5, label: "5s" },
+                      { v: 10, label: "10s" },
+                      { v: 30, label: "30s" },
+                    ].map((o) => (
+                      <button
+                        type="button"
+                        key={o.v}
+                        className={`em-segment-btn${undoSend === o.v ? " is-active" : ""}`}
+                        onClick={() => saveUndoSend(o.v)}
+                      >
+                        {o.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
 

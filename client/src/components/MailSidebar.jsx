@@ -2,6 +2,8 @@ import { DropdownMenu } from "@cloudflare/kumo";
 import {
   Archive,
   CaretUpDown,
+  Clock,
+  ClockCountdown,
   FileText,
   Gear,
   Moon,
@@ -25,6 +27,7 @@ const FOLDERS = [
   { key: "starred", icon: Star },
   { key: "sent", icon: PaperPlaneTilt },
   { key: "drafts", icon: FileText },
+  { key: "snoozed", icon: Clock },
   { key: "archive", icon: Archive },
   { key: "spam", icon: Warning },
   { key: "trash", icon: Trash },
@@ -43,6 +46,7 @@ export function MailSidebar({
   onToggleMode,
   onOpenSettings,
   onOpenAdmin,
+  onOpenScheduled,
   onSignOut,
   onNavigate,
 }) {
@@ -106,7 +110,9 @@ export function MailSidebar({
             >
               <span className="em-label-dot" style={{ background: l.color }} />
               <span className="em-nav-label">{l.name}</span>
-              {l.rule?.conditions?.length > 0 && <span className="em-label-auto" aria-hidden="true" />}
+              {l.rule?.conditions?.length > 0 && (
+                <span className="em-label-auto" aria-hidden="true" />
+              )}
             </button>
             <button
               type="button"
@@ -146,6 +152,9 @@ export function MailSidebar({
           <DropdownMenu.Content className="em-account-menu" style={{ zIndex: 200 }}>
             <DropdownMenu.Item icon={Gear} onClick={onOpenSettings}>
               Settings
+            </DropdownMenu.Item>
+            <DropdownMenu.Item icon={ClockCountdown} onClick={onOpenScheduled}>
+              Scheduled
             </DropdownMenu.Item>
             {user.isAdmin && (
               <DropdownMenu.Item icon={ShieldCheck} onClick={onOpenAdmin}>
