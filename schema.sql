@@ -63,9 +63,11 @@ CREATE TABLE IF NOT EXISTS messages (
   pgp INTEGER NOT NULL DEFAULT 0,
   auth_status TEXT NOT NULL DEFAULT 'none',
   auth_detail TEXT,
+  snooze_until INTEGER,
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_messages_folder ON messages(user_id, folder, date DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_snooze ON messages(user_id, snooze_until);
 CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(user_id, thread_id, date);
 CREATE INDEX IF NOT EXISTS idx_messages_rfc ON messages(user_id, rfc_message_id);
 CREATE INDEX IF NOT EXISTS idx_messages_starred ON messages(user_id, is_starred, date DESC);
@@ -134,6 +136,15 @@ CREATE TABLE IF NOT EXISTS filters (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_filters_user ON filters(user_id, position);
+
+CREATE TABLE IF NOT EXISTS scheduled_sends (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  payload_json TEXT NOT NULL,
+  send_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_scheduled_due ON scheduled_sends(send_at);
 
 CREATE TABLE IF NOT EXISTS domains (
   id TEXT PRIMARY KEY,

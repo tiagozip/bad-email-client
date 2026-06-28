@@ -1,6 +1,7 @@
 import { handleApi } from "./api.js";
 import { reverifyAllDomains } from "./domains.js";
 import { handleEmail } from "./mail.js";
+import { processScheduledSends, wakeSnoozed } from "./scheduler.js";
 import { error } from "./util.js";
 
 const CSP = [
@@ -58,8 +59,17 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
+    if (event.cron === "17 7 * * *") {
+      ctx.waitUntil(
+        reverifyAllDomains(env).catch((e) => console.error("reverify error", e?.stack || e)),
+      );
+      return;
+    }
     ctx.waitUntil(
-      reverifyAllDomains(env).catch((e) => console.error("reverify error", e?.stack || e)),
+      Promise.all([
+        processScheduledSends(env).catch((e) => console.error("sched send error", e?.stack || e)),
+        wakeSnoozed(env).catch((e) => console.error("wake snooze error", e?.stack || e)),
+      ]),
     );
   },
 };

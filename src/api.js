@@ -378,6 +378,7 @@ async function listMessages(request, env, user) {
   const where = ["m.user_id = ?"];
   const binds = [user.id];
 
+  const nowTs = now();
   if (q) {
     const term = q.replace(/[^\w\s@.-]/g, " ").trim();
     if (!term) return json({ messages: [], nextCursor: null });
@@ -395,14 +396,21 @@ async function listMessages(request, env, user) {
     if (!ids.length) return json({ messages: [], nextCursor: null });
     where.push(`m.id IN (${ids.map(() => "?").join(",")})`);
     binds.push(...ids);
-  } else if (starred) {
-    where.push("m.is_starred = 1 AND m.folder != 'trash'");
-  } else if (labelId) {
-    where.push("m.id IN (SELECT message_id FROM message_labels WHERE label_id = ?)");
-    binds.push(labelId);
+  } else if (folder === "snoozed") {
+    where.push("m.snooze_until > ?");
+    binds.push(nowTs);
   } else {
-    where.push("m.folder = ?");
-    binds.push(folder);
+    if (starred) {
+      where.push("m.is_starred = 1 AND m.folder != 'trash'");
+    } else if (labelId) {
+      where.push("m.id IN (SELECT message_id FROM message_labels WHERE label_id = ?)");
+      binds.push(labelId);
+    } else {
+      where.push("m.folder = ?");
+      binds.push(folder);
+    }
+    where.push("(m.snooze_until IS NULL OR m.snooze_until <= ?)");
+    binds.push(nowTs);
   }
 
   if (cursor) {
@@ -767,12 +775,63 @@ export async function handleApi(request, env, ctx) {
   if (path === "/api/send" && method === "POST") {
     try {
       const b = await readJson(request);
+      const settings = JSON.parse(user.settings_json || "{}");
+      const undoMs = clampInt(settings.undoSend, 0, 120, 0) * 1000;
+      const explicit = Number(b.sendAt) || 0;
+      let sendAt = 0;
+      if (explicit > now() + 1000) sendAt = explicit;
+      else if (undoMs > 0 && !b.skipUndo) sendAt = now() + undoMs;
+      if (sendAt) {
+        const id = uuid();
+        await env.DB.prepare(
+          "INSERT INTO scheduled_sends (id, user_id, payload_json, send_at, created_at) VALUES (?,?,?,?,?)",
+        )
+          .bind(id, user.id, JSON.stringify(b), sendAt, now())
+          .run();
+        return json({ scheduled: true, id, sendAt, undoMs: explicit ? 0 : undoMs });
+      }
       const result = await sendMessage(env, user, b);
       if (b.draftId) await deleteMessageRow(env, user.id, b.draftId);
       return json({ ok: true, ...result });
     } catch (e) {
       return error(400, e.message || "send failed", { code: e.code });
     }
+  }
+
+  if (path === "/api/scheduled-sends" && method === "GET") {
+    const res = await env.DB.prepare(
+      "SELECT id, payload_json, send_at, created_at FROM scheduled_sends WHERE user_id = ? ORDER BY send_at",
+    )
+      .bind(user.id)
+      .all();
+    return json({
+      sends: (res.results || []).map((r) => {
+        let p = {};
+        try {
+          p = JSON.parse(r.payload_json);
+        } catch {}
+        return {
+          id: r.id,
+          sendAt: r.send_at,
+          to: p.to || [],
+          subject: p.subject || "(no subject)",
+        };
+      }),
+    });
+  }
+  if ((m = path.match(/^\/api\/scheduled-sends\/([\w-]+)$/)) && method === "DELETE") {
+    await env.DB.prepare("DELETE FROM scheduled_sends WHERE id = ? AND user_id = ?")
+      .bind(m[1], user.id)
+      .run();
+    return json({ ok: true });
+  }
+  if ((m = path.match(/^\/api\/messages\/([\w-]+)\/snooze$/)) && method === "POST") {
+    const b = await readJson(request);
+    const until = Number(b.until) || null;
+    await env.DB.prepare("UPDATE messages SET snooze_until = ? WHERE id = ? AND user_id = ?")
+      .bind(until && until > now() ? until : null, m[1], user.id)
+      .run();
+    return json({ ok: true });
   }
 
   if (path === "/api/drafts" && method === "POST") return saveDraft(request, env, user, null);
