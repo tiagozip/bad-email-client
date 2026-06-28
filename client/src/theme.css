@@ -2704,6 +2704,7 @@ html[data-theme="sakura"] {
   align-items: flex-start;
   gap: var(--em-4);
   padding: 14px 0;
+  animation: em-skel-pulse 1.5s ease-in-out infinite;
 }
 
 .em-skel-avatar {
@@ -2712,7 +2713,6 @@ html[data-theme="sakura"] {
   border-radius: 14px;
   flex: none;
   background: var(--color-kumo-tint);
-  animation: em-skel-pulse 1.4s ease-in-out infinite;
 }
 
 .em-skel-lines {
@@ -2721,7 +2721,18 @@ html[data-theme="sakura"] {
   display: flex;
   flex-direction: column;
   gap: 9px;
-  padding-top: 3px;
+  padding-top: 4px;
+}
+
+.em-skel-bar {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--color-kumo-tint);
+}
+
+.em-skel-bar-lg {
+  height: 13px;
+  border-radius: 6px;
 }
 
 @keyframes em-skel-pulse {

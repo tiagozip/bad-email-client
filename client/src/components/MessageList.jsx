@@ -1,4 +1,4 @@
-import { Button, Checkbox, Loader, SkeletonLine, Tooltip } from "@cloudflare/kumo";
+import { Button, Checkbox, Loader, Tooltip } from "@cloudflare/kumo";
 import {
   Archive,
   Envelope,
@@ -219,13 +219,13 @@ export function MessageList({ store, searchRef, onMenu, onCompose }) {
       <div className="em-list-scroll" ref={scrollRef} onScroll={onScroll}>
         {listLoading ? (
           <div className="em-skel">
-            {Array.from({ length: 7 }).map((_, i) => (
+            {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="em-skel-row">
                 <div className="em-skel-avatar" />
                 <div className="em-skel-lines">
-                  <SkeletonLine style={{ width: "38%" }} />
-                  <SkeletonLine style={{ width: "62%" }} />
-                  <SkeletonLine style={{ width: "85%" }} />
+                  <div className="em-skel-bar" style={{ width: "30%" }} />
+                  <div className="em-skel-bar em-skel-bar-lg" style={{ width: "58%" }} />
+                  <div className="em-skel-bar" style={{ width: "82%" }} />
                 </div>
               </div>
             ))}
