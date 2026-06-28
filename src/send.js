@@ -5,7 +5,9 @@ import { bumpContact, htmlKey, insertMessage, resolveThread, updateStorage } fro
 import { isValidEmail, normalizeAddr, now, snippetFrom, uuid } from "./util.js";
 
 async function pgpEncryptToSelf(env, userId, content) {
-  const row = await env.DB.prepare("SELECT pgp_public_key FROM users WHERE id = ? AND pgp_enabled = 1")
+  const row = await env.DB.prepare(
+    "SELECT pgp_public_key FROM users WHERE id = ? AND pgp_enabled = 1",
+  )
     .bind(userId)
     .first();
   if (!row?.pgp_public_key) return null;
@@ -76,6 +78,20 @@ export async function sendMessage(env, user, payload) {
       .bind(normalizeAddr(payload.from), user.id)
       .first();
     if (owned) fromAddr = owned.address;
+  }
+
+  const fromDomain = fromAddr.split("@")[1]?.toLowerCase() || "";
+  if (fromDomain && fromDomain !== String(env.MAIL_DOMAIN || "").toLowerCase()) {
+    const dom = await env.DB.prepare("SELECT send_verified FROM domains WHERE domain = ?")
+      .bind(fromDomain)
+      .first();
+    if (!dom?.send_verified) {
+      const err = new Error(
+        "This domain is not verified for sending yet. Add its SPF and DKIM records in Cloudflare Email Sending, then verify it in Admin.",
+      );
+      err.code = "domain_unverified";
+      throw err;
+    }
   }
 
   const subject = (payload.subject || "(no subject)").slice(0, 988);

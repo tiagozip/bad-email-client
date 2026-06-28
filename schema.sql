@@ -134,6 +134,7 @@ CREATE TABLE IF NOT EXISTS domains (
   id TEXT PRIMARY KEY,
   domain TEXT UNIQUE NOT NULL,
   verified INTEGER NOT NULL DEFAULT 0,
+  send_verified INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   added_by TEXT
 );

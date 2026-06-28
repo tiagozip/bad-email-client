@@ -219,6 +219,37 @@ const ALIAS_RE = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/;
 const ALIAS_LIMIT = 100;
 const DOMAIN_RE = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 const CF_MX_RE = /(?:^|\.)mx\.cloudflare\.net\.?$/;
+const CF_SPF_INCLUDE = "_spf.mx.cloudflare.net";
+const DKIM_SELECTORS = ["cf2024-1", "cf2024-2", "cf2025-1", "cf2026-1"];
+
+async function lookupTxt(name) {
+  const res = await fetch(
+    `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=TXT`,
+    { headers: { accept: "application/dns-json" } },
+  );
+  if (!res.ok) throw new Error("dns lookup failed");
+  const data = await res.json();
+  return (data.Answer || [])
+    .filter((a) => a.type === 16)
+    .map((a) =>
+      String(a.data || "")
+        .replace(/^"|"$/g, "")
+        .replace(/"\s+"/g, "")
+        .toLowerCase(),
+    );
+}
+
+async function checkSendingDns(domain) {
+  const spfRecords = await lookupTxt(domain);
+  const spf = spfRecords.some((t) => t.startsWith("v=spf1") && t.includes(CF_SPF_INCLUDE));
+  const dkimLists = await Promise.all(
+    DKIM_SELECTORS.map((sel) => lookupTxt(`${sel}._domainkey.${domain}`).catch(() => [])),
+  );
+  const dkim = dkimLists.some((list) =>
+    list.some((t) => t.includes("v=dkim1") && /p=\s*[a-z0-9+/]/.test(t)),
+  );
+  return { spf, dkim, ok: spf && dkim };
+}
 
 async function lookupMx(domain) {
   const res = await fetch(
@@ -1132,12 +1163,13 @@ export async function handleApi(request, env, ctx) {
   if (path === "/api/domains" && method === "GET") {
     if (!user.is_admin) return error(403, "admin only");
     const res = await env.DB.prepare(
-      "SELECT id, domain, verified, created_at, added_by FROM domains ORDER BY created_at DESC",
+      "SELECT id, domain, verified, send_verified, created_at, added_by FROM domains ORDER BY created_at DESC",
     ).all();
     const custom = (res.results || []).map((r) => ({
       id: r.id,
       domain: r.domain,
       verified: !!r.verified,
+      sendVerified: !!r.send_verified,
       createdAt: r.created_at,
       builtIn: false,
     }));
@@ -1145,6 +1177,7 @@ export async function handleApi(request, env, ctx) {
       id: "builtin",
       domain: String(env.MAIL_DOMAIN || "").toLowerCase(),
       verified: true,
+      sendVerified: true,
       createdAt: null,
       builtIn: true,
     };
@@ -1178,16 +1211,20 @@ export async function handleApi(request, env, ctx) {
       .first();
     if (!row) return error(404, "not found");
     let lookup;
+    let sending;
     try {
       lookup = await lookupMx(row.domain);
+      sending = await checkSendingDns(row.domain);
     } catch {
       return error(502, "dns lookup failed, try again");
     }
-    await env.DB.prepare("UPDATE domains SET verified = ? WHERE id = ?")
-      .bind(lookup.routesToCloudflare ? 1 : 0, row.id)
+    await env.DB.prepare("UPDATE domains SET verified = ?, send_verified = ? WHERE id = ?")
+      .bind(lookup.routesToCloudflare ? 1 : 0, sending.ok ? 1 : 0, row.id)
       .run();
     return json({
       verified: lookup.routesToCloudflare,
+      sendVerified: sending.ok,
+      sending,
       records: lookup.records,
     });
   }

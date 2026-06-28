@@ -51,8 +51,15 @@ function Domains() {
     try {
       const res = await api.verifyDomain(id);
       setLookups((p) => ({ ...p, [id]: res }));
-      setDomains((p) => (p || []).map((d) => (d.id === id ? { ...d, verified: res.verified } : d)));
-      if (res.verified) notify("Domain verified", "Mail will route through this worker.", "success");
+      setDomains((p) =>
+        (p || []).map((d) =>
+          d.id === id ? { ...d, verified: res.verified, sendVerified: res.sendVerified } : d,
+        ),
+      );
+      if (res.verified && res.sendVerified)
+        notify("Domain ready", "This domain can send and receive mail.", "success");
+      else if (res.verified)
+        notify("Receiving verified", "Set up Email Sending to send from this domain too.", "success");
     } catch (err) {
       notifyError(err);
     } finally {
@@ -89,11 +96,20 @@ function Domains() {
                 <span className="em-alias-addr">{d.domain}</span>
                 {d.verified ? (
                   <Badge variant="green" icon={CheckCircle}>
-                    verified
+                    receiving
                   </Badge>
                 ) : (
                   <Badge variant="neutral" icon={Warning}>
-                    unverified
+                    no receiving
+                  </Badge>
+                )}
+                {d.sendVerified ? (
+                  <Badge variant="green" icon={CheckCircle}>
+                    sending
+                  </Badge>
+                ) : (
+                  <Badge variant="neutral" icon={Warning}>
+                    no sending
                   </Badge>
                 )}
                 {d.builtIn && <Badge variant="purple">built-in</Badge>}
@@ -121,22 +137,17 @@ function Domains() {
               )}
               {lookups[d.id] && (
                 <div className="em-domain-lookup">
-                  {lookups[d.id].records.length === 0 ? (
-                    <span>No MX records found for this domain.</span>
-                  ) : (
-                    <ul>
-                      {lookups[d.id].records.map((r) => (
-                        <li key={`${r.priority}-${r.target}`}>
-                          {r.priority} {r.target}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <span>
-                    {lookups[d.id].verified
-                      ? "MX points to Cloudflare Email Routing."
-                      : "MX does not point to Cloudflare Email Routing yet."}
-                  </span>
+                  <div className="em-dns-check">
+                    <span className={lookups[d.id].verified ? "is-ok" : "is-bad"}>
+                      {lookups[d.id].verified ? "✓" : "✗"} Receiving (MX, Cloudflare Email Routing)
+                    </span>
+                    <span className={lookups[d.id].sending?.spf ? "is-ok" : "is-bad"}>
+                      {lookups[d.id].sending?.spf ? "✓" : "✗"} SPF record
+                    </span>
+                    <span className={lookups[d.id].sending?.dkim ? "is-ok" : "is-bad"}>
+                      {lookups[d.id].sending?.dkim ? "✓" : "✗"} DKIM record
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
@@ -167,21 +178,32 @@ function Domains() {
       )}
 
       <div className="em-dns-steps">
-        <div className="em-dns-steps-title">DNS setup for a new domain</div>
+        <div className="em-dns-steps-title">Receiving (inbound)</div>
         <ol>
           <li>Add the domain to the same Cloudflare account that runs this worker.</li>
           <li>
             Open Email, Email Routing and enable it. Cloudflare adds the MX records (route1, route2,
-            route3 .mx.cloudflare.net) and the SPF record for you.
+            route3 .mx.cloudflare.net).
           </li>
           <li>
             Under Email Routing, Routing rules, set the catch-all action to Send to a Worker and
             pick estrogen-mail. This delivers all mail for the domain into this app.
           </li>
-          <li>Come back here and press Verify. It passes once the MX records resolve.</li>
+        </ol>
+        <div className="em-dns-steps-title">Sending (outbound)</div>
+        <ol>
           <li>
-            For outbound mail, set up Cloudflare Email Sending and add its DKIM record so messages
-            sent from this domain pass DKIM and DMARC.
+            Open Email, Email Sending and onboard this domain. Cloudflare adds the SPF and DKIM
+            records automatically (the DKIM key is generated per domain).
+          </li>
+          <li>
+            If you manage DNS yourself, the SPF record is a TXT on the root:{" "}
+            <code>v=spf1 include:_spf.mx.cloudflare.net ~all</code>. The DKIM record is the per-domain
+            CNAME/TXT Cloudflare shows during onboarding.
+          </li>
+          <li>
+            Press Verify. Receiving passes once the MX resolves, sending passes once SPF and DKIM
+            resolve. You can only send from a domain after sending is verified.
           </li>
         </ol>
       </div>

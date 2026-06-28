@@ -1857,6 +1857,20 @@ html[data-theme="sakura"] {
   font-variant-numeric: tabular-nums;
 }
 
+.em-dns-check {
+  display: flex;
+  flex-direction: column;
+  gap: var(--em-1);
+}
+
+.em-dns-check .is-ok {
+  color: var(--color-kumo-green, #5fcf80);
+}
+
+.em-dns-check .is-bad {
+  color: var(--text-color-kumo-inactive);
+}
+
 .em-dns-steps {
   margin-top: var(--em-4);
   padding-top: var(--em-4);
