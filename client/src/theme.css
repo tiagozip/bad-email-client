@@ -3382,6 +3382,34 @@ html[data-theme="sakura"] {
   color: var(--text-color-kumo-subtle);
 }
 
+.em-spoof-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: var(--em-2);
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #b3122b;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
+.em-spoof-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #b3122b;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  flex: none;
+}
+
 .em-spoof-banner {
   display: flex;
   gap: var(--em-3);

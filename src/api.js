@@ -218,13 +218,80 @@ async function upsertOidcUser(env, claims) {
 const ALIAS_RE = /^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$/;
 const ALIAS_LIMIT = 100;
 const HIDDEN_LIMIT = 500;
-const HIDDEN_CHARS = "abcdefghijkmnpqrstuvwxyz23456789";
+const HIDDEN_ADJ = [
+  "amber",
+  "brave",
+  "calm",
+  "clever",
+  "cosmic",
+  "cozy",
+  "crimson",
+  "dapper",
+  "eager",
+  "fuzzy",
+  "gentle",
+  "golden",
+  "happy",
+  "jolly",
+  "lucky",
+  "lunar",
+  "mellow",
+  "merry",
+  "misty",
+  "noble",
+  "plucky",
+  "quiet",
+  "rapid",
+  "royal",
+  "sandy",
+  "shiny",
+  "snowy",
+  "solar",
+  "sunny",
+  "swift",
+  "tidy",
+  "witty",
+];
+const HIDDEN_NOUN = [
+  "otter",
+  "fox",
+  "finch",
+  "maple",
+  "comet",
+  "river",
+  "pebble",
+  "willow",
+  "sparrow",
+  "cedar",
+  "lark",
+  "heron",
+  "badger",
+  "marten",
+  "hazel",
+  "robin",
+  "lynx",
+  "moth",
+  "fern",
+  "dawn",
+  "dune",
+  "reef",
+  "cove",
+  "vale",
+  "brook",
+  "glade",
+  "thorn",
+  "quartz",
+  "opal",
+  "ember",
+  "wren",
+  "koi",
+];
 
 function genHiddenLocal() {
-  const bytes = crypto.getRandomValues(new Uint8Array(12));
-  let out = "";
-  for (const b of bytes) out += HIDDEN_CHARS[b % HIDDEN_CHARS.length];
-  return out;
+  const r = crypto.getRandomValues(new Uint8Array(3));
+  const adj = HIDDEN_ADJ[r[0] % HIDDEN_ADJ.length];
+  const noun = HIDDEN_NOUN[r[1] % HIDDEN_NOUN.length];
+  return `${adj}-${noun}-${10 + (r[2] % 90)}`;
 }
 const DOMAIN_RE = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 const CF_MX_RE = /(?:^|\.)mx\.cloudflare\.net\.?$/;

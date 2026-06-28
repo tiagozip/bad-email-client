@@ -15,6 +15,7 @@ import {
   Check,
   CheckCircle,
   Code,
+  Copy,
   Funnel,
   Globe,
   Lock,
@@ -258,7 +259,12 @@ function Addresses({ user, setUser }) {
                 <Badge variant="purple">primary</Badge>
               ) : (
                 <div className="em-alias-actions">
-                  <Button size="sm" variant="ghost" icon={Star} onClick={() => makePrimary(a.address)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    icon={Star}
+                    onClick={() => makePrimary(a.address)}
+                  >
                     Make primary
                   </Button>
                   <Button
@@ -288,12 +294,7 @@ function Addresses({ user, setUser }) {
           />
           {domains.length > 1 ? (
             <div className="em-alias-domain">
-              <Select
-                aria-label="Alias domain"
-                size="sm"
-                value={domain}
-                onValueChange={setDomain}
-              >
+              <Select aria-label="Alias domain" size="sm" value={domain} onValueChange={setDomain}>
                 {domains.map((d) => (
                   <Select.Option key={d} value={d}>
                     @{d}
@@ -309,7 +310,11 @@ function Addresses({ user, setUser }) {
           Add
         </Button>
       </form>
-      {error && <div className="em-form-error" style={{ marginTop: 8 }}>{error}</div>}
+      {error && (
+        <div className="em-form-error" style={{ marginTop: 8 }}>
+          {error}
+        </div>
+      )}
     </div>
   );
 }
@@ -425,7 +430,11 @@ function HiddenAliases() {
                   title="Copy address"
                 >
                   <span>{a.address}</span>
-                  {copied === a.address ? <Check size={14} weight="bold" /> : <ClipboardText size={14} />}
+                  {copied === a.address ? (
+                    <Check size={14} weight="bold" />
+                  ) : (
+                    <Copy size={14} />
+                  )}
                 </button>
                 <div className="em-hidden-meta">
                   {a.label && <span className="em-hidden-label">{a.label}</span>}
@@ -543,11 +552,10 @@ function Encryption({ user, setUser }) {
   return (
     <div className="em-card">
       <div className="em-card-head">
-        <h2 className="em-card-title">Encryption</h2>
+        <h2 className="em-card-title">End-to-end encryption</h2>
         <p className="em-card-sub">
-          End-to-end encryption: incoming mail is encrypted to your key and can only be read with
-          your passphrase. The passphrase never leaves this device, if you lose it your encrypted
-          mail is unrecoverable.
+          Encrypts all incoming mail so only you can read it. The passphrase never leaves this
+          device, if you lose it your encrypted mail is unrecoverable.
         </p>
       </div>
 
@@ -959,7 +967,8 @@ function Domains() {
           <h2 className="em-card-title">Your domains</h2>
           <p className="em-card-sub">
             Add your own domain to send and receive mail on it. Domains are private to you. Publish
-            one to list it in the public directory so other people here can make addresses on it too.
+            one to list it in the public directory so other people here can make addresses on it
+            too.
           </p>
         </div>
 
@@ -1026,7 +1035,8 @@ function Domains() {
                   <div className="em-domain-lookup">
                     <div className="em-dns-check">
                       <span className={lookups[d.id].verified ? "is-ok" : "is-bad"}>
-                        {lookups[d.id].verified ? "✓" : "✗"} Receiving (MX, Cloudflare Email Routing)
+                        {lookups[d.id].verified ? "✓" : "✗"} Receiving (MX, Cloudflare Email
+                        Routing)
                       </span>
                       <span className={lookups[d.id].sending?.spf ? "is-ok" : "is-bad"}>
                         {lookups[d.id].sending?.spf ? "✓" : "✗"} SPF record
@@ -1069,11 +1079,12 @@ function Domains() {
           <ol>
             <li>The domain must be on the Cloudflare account that runs this mail server.</li>
             <li>
-              Enable Email Routing (adds the MX records) and point the catch-all at this worker, then
-              enable Email Sending (adds SPF + DKIM).
+              Enable Email Routing (adds the MX records) and point the catch-all at this worker,
+              then enable Email Sending (adds SPF + DKIM).
             </li>
             <li>
-              Press Verify. Receiving passes once the MX resolves, sending once SPF and DKIM resolve.
+              Press Verify. Receiving passes once the MX resolves, sending once SPF and DKIM
+              resolve.
             </li>
           </ol>
         </div>
@@ -1249,187 +1260,212 @@ export function Settings({ open, user, setUser, mode, onSetMode, palette, onSetP
             })}
           </nav>
           <div className="em-settings-content">
-          {section === "account" && (
-          <>
-          <div className="em-card">
-            <div className="em-card-head">
-              <h2 className="em-card-title">Identity</h2>
-              <p className="em-card-sub">How your name and sign-off appear on outgoing mail.</p>
-            </div>
-            <div className="em-avatar-row">
-              {user.avatarUrl ? (
-                <img className="em-avatar-lg" src={user.avatarUrl} alt="" />
-              ) : (
-                <span className="em-avatar-lg em-avatar-mono" style={{ background: monoColor(user.address) }}>
-                  {initials({ name: user.displayName, address: user.address })}
-                </span>
-              )}
-              <div className="em-avatar-actions">
-                <input
-                  ref={avatarInput}
-                  type="file"
-                  accept="image/*"
-                  hidden
-                  onChange={onAvatarFile}
-                />
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  icon={Camera}
-                  loading={avatarBusy}
-                  onClick={() => avatarInput.current?.click()}
-                >
-                  {user.avatarUrl ? "Change photo" : "Upload photo"}
-                </Button>
-                {user.avatarUrl && (
-                  <Button size="sm" variant="ghost" onClick={removeAvatar} disabled={avatarBusy}>
-                    Remove
-                  </Button>
-                )}
-              </div>
-            </div>
-            <div className="em-field-block">
-              <Input
-                label="Display name"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-              />
-              <div>
-                <label className="em-field-label">Signature</label>
-                <textarea
-                  className="em-textarea"
-                  value={signature}
-                  onChange={(e) => setSignature(e.target.value)}
-                  placeholder="Appended to outgoing mail"
-                />
-              </div>
-            </div>
-          </div>
-
-          <Addresses user={user} setUser={setUser} />
-
-          <HiddenAliases />
-
-          {user.isAdmin && (
-            <div className="em-card">
-              <div className="em-card-head">
-                <h2 className="em-card-title">Catch-all</h2>
-              </div>
-              <div className="em-toggle-row">
-                <div className="em-toggle-copy">
-                  <div className="em-toggle-title">Receive unclaimed mail</div>
-                  <div className="em-toggle-sub">
-                    Receive mail sent to any unclaimed @estrogen.delivery address.
+            {section === "account" && (
+              <>
+                <div className="em-card">
+                  <div className="em-card-head">
+                    <h2 className="em-card-title">Identity</h2>
+                    <p className="em-card-sub">
+                      How your name and sign-off appear on outgoing mail.
+                    </p>
                   </div>
-                </div>
-                <Switch aria-label="Catch-all" checked={catchAll} onCheckedChange={saveCatchAll} />
-              </div>
-            </div>
-          )}
-
-          <div className="em-card">
-            <div className="em-card-head">
-              <h2 className="em-card-title">Storage</h2>
-              <p className="em-card-sub">No limits. Store as much as you like.</p>
-            </div>
-            <div className="em-stat-row">
-              <span className="em-stat-value">{humanSize(used)}</span>
-              <span className="em-stat-label">used</span>
-            </div>
-          </div>
-
-          <Button variant="primary" loading={busy} onClick={save}>
-            Save changes
-          </Button>
-          </>
-          )}
-
-          {section === "appearance" && (
-          <>
-          <div className="em-card">
-            <div className="em-card-head">
-              <h2 className="em-card-title">Appearance & reading</h2>
-            </div>
-            <div style={{ marginBottom: "var(--em-5)" }}>
-              <label className="em-field-label">Theme</label>
-              <div className="em-theme-grid">
-                {PALETTES.map((p) => {
-                  const active = (palette || "plum") === p.id;
-                  return (
-                    <button
-                      type="button"
-                      key={p.id}
-                      className={`em-theme-swatch${active ? " is-active" : ""}`}
-                      onClick={() => pickPalette(p.id)}
-                    >
-                      <div className="em-theme-preview" style={{ background: p.canvas }}>
-                        <span className="em-theme-dot" style={{ background: p.brand }} />
-                      </div>
-                      <div className="em-theme-label">
-                        <span>{p.name}</span>
-                        {active && <Check size={14} weight="bold" />}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="em-toggle-row">
-              <div className="em-toggle-copy">
-                <div className="em-toggle-title">Dark mode</div>
-                <div className="em-toggle-sub">
-                  Toggles the deep plum theme between dark and light. Applies to the Plum theme.
-                </div>
-              </div>
-              <Switch
-                aria-label="Dark mode"
-                checked={mode === "dark"}
-                onCheckedChange={(v) => onSetMode(v ? "dark" : "light")}
-              />
-            </div>
-            <div className="em-toggle-row">
-              <div className="em-toggle-copy">
-                <div className="em-toggle-title">Load remote images by default</div>
-                <div className="em-toggle-sub">Show images in messages without asking each time.</div>
-              </div>
-              <Switch aria-label="Load remote images by default" checked={imagesDefault} onCheckedChange={setImagesDefault} />
-            </div>
-          </div>
-
-          <Button variant="primary" loading={busy} onClick={save}>
-            Save changes
-          </Button>
-          </>
-          )}
-
-          {section === "notifications" && <Notifications />}
-
-          {section === "domains" && <Domains />}
-
-          {section === "filters" && (
-            <>
-              <div className="em-card">
-                <div className="em-card-head">
-                  <h2 className="em-card-title">Spam filter</h2>
-                </div>
-                <div className="em-toggle-row">
-                  <div className="em-toggle-copy">
-                    <div className="em-toggle-title">Smart spam detection</div>
-                    <div className="em-toggle-sub">
-                      Automatically move scams, phishing, and junk to the spam folder. Your data is
-                      not stored or used for training.
+                  <div className="em-avatar-row">
+                    {user.avatarUrl ? (
+                      <img className="em-avatar-lg" src={user.avatarUrl} alt="" />
+                    ) : (
+                      <span
+                        className="em-avatar-lg em-avatar-mono"
+                        style={{ background: monoColor(user.address) }}
+                      >
+                        {initials({ name: user.displayName, address: user.address })}
+                      </span>
+                    )}
+                    <div className="em-avatar-actions">
+                      <input
+                        ref={avatarInput}
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        onChange={onAvatarFile}
+                      />
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        icon={Camera}
+                        loading={avatarBusy}
+                        onClick={() => avatarInput.current?.click()}
+                      >
+                        {user.avatarUrl ? "Change photo" : "Upload photo"}
+                      </Button>
+                      {user.avatarUrl && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={removeAvatar}
+                          disabled={avatarBusy}
+                        >
+                          Remove
+                        </Button>
+                      )}
                     </div>
                   </div>
-                  <Switch aria-label="Smart spam detection" checked={aiSpam} onCheckedChange={saveAiSpam} />
+                  <div className="em-field-block">
+                    <Input
+                      label="Display name"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                    />
+                    <div>
+                      <label className="em-field-label">Signature</label>
+                      <textarea
+                        className="em-textarea"
+                        value={signature}
+                        onChange={(e) => setSignature(e.target.value)}
+                        placeholder="Appended to outgoing mail"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <Filters />
-            </>
-          )}
 
-          {section === "encryption" && <Encryption user={user} setUser={setUser} />}
+                <Addresses user={user} setUser={setUser} />
 
-          {section === "developer" && <ApiKeys />}
+                <HiddenAliases />
+
+                {user.isAdmin && (
+                  <div className="em-card">
+                    <div className="em-card-head">
+                      <h2 className="em-card-title">Catch-all</h2>
+                    </div>
+                    <div className="em-toggle-row">
+                      <div className="em-toggle-copy">
+                        <div className="em-toggle-title">Receive unclaimed mail</div>
+                        <div className="em-toggle-sub">
+                          Receive mail sent to any unclaimed @estrogen.delivery address.
+                        </div>
+                      </div>
+                      <Switch
+                        aria-label="Catch-all"
+                        checked={catchAll}
+                        onCheckedChange={saveCatchAll}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="em-card">
+                  <div className="em-card-head">
+                    <h2 className="em-card-title">Storage</h2>
+                    <p className="em-card-sub">No limits. Store as much as you like.</p>
+                  </div>
+                  <div className="em-stat-row">
+                    <span className="em-stat-value">{humanSize(used)}</span>
+                    <span className="em-stat-label">used</span>
+                  </div>
+                </div>
+
+                <Button variant="primary" loading={busy} onClick={save}>
+                  Save changes
+                </Button>
+              </>
+            )}
+
+            {section === "appearance" && (
+              <>
+                <div className="em-card">
+                  <div className="em-card-head">
+                    <h2 className="em-card-title">Appearance & reading</h2>
+                  </div>
+                  <div style={{ marginBottom: "var(--em-5)" }}>
+                    <label className="em-field-label">Theme</label>
+                    <div className="em-theme-grid">
+                      {PALETTES.map((p) => {
+                        const active = (palette || "plum") === p.id;
+                        return (
+                          <button
+                            type="button"
+                            key={p.id}
+                            className={`em-theme-swatch${active ? " is-active" : ""}`}
+                            onClick={() => pickPalette(p.id)}
+                          >
+                            <div className="em-theme-preview" style={{ background: p.canvas }}>
+                              <span className="em-theme-dot" style={{ background: p.brand }} />
+                            </div>
+                            <div className="em-theme-label">
+                              <span>{p.name}</span>
+                              {active && <Check size={14} weight="bold" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="em-toggle-row">
+                    <div className="em-toggle-copy">
+                      <div className="em-toggle-title">Dark mode</div>
+                      <div className="em-toggle-sub">
+                        Toggles the deep plum theme between dark and light. Applies to the Plum
+                        theme.
+                      </div>
+                    </div>
+                    <Switch
+                      aria-label="Dark mode"
+                      checked={mode === "dark"}
+                      onCheckedChange={(v) => onSetMode(v ? "dark" : "light")}
+                    />
+                  </div>
+                  <div className="em-toggle-row">
+                    <div className="em-toggle-copy">
+                      <div className="em-toggle-title">Load remote images by default</div>
+                      <div className="em-toggle-sub">
+                        Show images in messages without asking each time.
+                      </div>
+                    </div>
+                    <Switch
+                      aria-label="Load remote images by default"
+                      checked={imagesDefault}
+                      onCheckedChange={setImagesDefault}
+                    />
+                  </div>
+                </div>
+
+                <Button variant="primary" loading={busy} onClick={save}>
+                  Save changes
+                </Button>
+              </>
+            )}
+
+            {section === "notifications" && <Notifications />}
+
+            {section === "domains" && <Domains />}
+
+            {section === "filters" && (
+              <>
+                <div className="em-card">
+                  <div className="em-card-head">
+                    <h2 className="em-card-title">Spam filter</h2>
+                  </div>
+                  <div className="em-toggle-row">
+                    <div className="em-toggle-copy">
+                      <div className="em-toggle-title">Smart spam detection</div>
+                      <div className="em-toggle-sub">
+                        Automatically move scams, phishing, and junk to the spam folder. Your data
+                        is not stored or used for training.
+                      </div>
+                    </div>
+                    <Switch
+                      aria-label="Smart spam detection"
+                      checked={aiSpam}
+                      onCheckedChange={saveAiSpam}
+                    />
+                  </div>
+                </div>
+                <Filters />
+              </>
+            )}
+
+            {section === "encryption" && <Encryption user={user} setUser={setUser} />}
+
+            {section === "developer" && <ApiKeys />}
           </div>
         </div>
       </Dialog>

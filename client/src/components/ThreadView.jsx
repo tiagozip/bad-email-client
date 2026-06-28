@@ -205,7 +205,11 @@ function PlainBody({ text }) {
       <Linkified text={main} />
       {quoted && (
         <div className="em-quoted">
-          <button type="button" className="em-quote-toggle" onClick={() => setShowQuoted((s) => !s)}>
+          <button
+            type="button"
+            className="em-quote-toggle"
+            onClick={() => setShowQuoted((s) => !s)}
+          >
             {showQuoted ? "Hide quoted text" : "Show quoted text"}
           </button>
           {showQuoted && (
@@ -223,7 +227,8 @@ function attIcon(mime) {
   const m = mime || "";
   if (m.startsWith("image/")) return FileImage;
   if (m === "application/pdf") return FilePdf;
-  if (m.includes("zip") || m.includes("compressed") || m.includes("tar") || m.includes("rar")) return FileZip;
+  if (m.includes("zip") || m.includes("compressed") || m.includes("tar") || m.includes("rar"))
+    return FileZip;
   if (m.includes("word") || m.includes("opendocument.text") || m.includes("msword")) return FileDoc;
   if (m.startsWith("text/")) return FileText;
   return FileIcon;
@@ -238,10 +243,20 @@ function Attachment({ att }) {
   if (isImage) {
     return (
       <div className="em-att-image">
-        <a href={inlineHref} target="_blank" rel="noopener noreferrer" className="em-att-image-thumb">
+        <a
+          href={inlineHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="em-att-image-thumb"
+        >
           <img src={inlineHref} alt={att.filename} loading="lazy" />
         </a>
-        <a className="em-att-image-bar" href={downloadHref} target="_blank" rel="noopener noreferrer">
+        <a
+          className="em-att-image-bar"
+          href={downloadHref}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <DownloadSimple size={13} />
           <span className="em-att-name">{att.filename}</span>
           <span className="em-att-size">{humanSize(att.size)}</span>
@@ -304,6 +319,11 @@ function MessageCard({ message, expanded, onToggle, onShowImages, onUnlocked }) 
             {message.from?.name && (
               <span className="em-msg-from-addr"> &lt;{message.from?.address}&gt;</span>
             )}
+            {message.authStatus === "fail" && (
+              <span className="em-spoof-badge">
+                <Warning size={12} weight="fill" /> Spoofed
+              </span>
+            )}
           </div>
           {expanded ? (
             <div className="em-msg-to">
@@ -334,11 +354,10 @@ function MessageCard({ message, expanded, onToggle, onShowImages, onUnlocked }) 
             <div className="em-spoof-banner">
               <Warning size={24} weight="fill" />
               <div className="em-spoof-copy">
-                <div className="em-spoof-title">Warning: this message may be spoofed</div>
+                <div className="em-spoof-title">This message may be spoofed</div>
                 <div className="em-spoof-text">
-                  The sender's identity could not be verified, the From address may be forged
-                  (SPF, DKIM, and DMARC checks failed). Do not trust links, attachments, or any
-                  request to log in, pay, or share information in this message.
+                  The sender's identity could not be verified and may be forged. Do not trust links,
+                  attachments, or any request to log in, pay, or share information in this message.
                   {message.authDetail && (
                     <span className="em-spoof-detail">
                       {" "}
@@ -392,7 +411,9 @@ function MessageCard({ message, expanded, onToggle, onShowImages, onUnlocked }) 
 }
 
 function pickFromAddress(message, user) {
-  const selves = new Set((user?.addresses?.map((a) => a.address) || []).map((a) => a.toLowerCase()));
+  const selves = new Set(
+    (user?.addresses?.map((a) => a.address) || []).map((a) => a.toLowerCase()),
+  );
   const candidates = [...(message.to || []), ...(message.cc || [])];
   const match = candidates.find((p) => p.address && selves.has(p.address.toLowerCase()));
   return match?.address || user?.address;
@@ -405,9 +426,15 @@ function QuickReply({ store, last, onReply, onForward }) {
   const [sending, setSending] = useState(false);
   const editorRef = useRef(null);
 
-  const selves = new Set((user?.addresses?.map((a) => a.address) || [user?.address]).filter(Boolean).map((a) => a.toLowerCase()));
+  const selves = new Set(
+    (user?.addresses?.map((a) => a.address) || [user?.address])
+      .filter(Boolean)
+      .map((a) => a.toLowerCase()),
+  );
   const lastExternalSender =
-    [...thread.messages].reverse().find((m) => m.from?.address && !selves.has(m.from.address.toLowerCase())) || last;
+    [...thread.messages]
+      .reverse()
+      .find((m) => m.from?.address && !selves.has(m.from.address.toLowerCase())) || last;
   const replyTo = lastExternalSender.from?.address;
   const replyName = lastExternalSender.from?.name || replyTo || "sender";
 
@@ -483,13 +510,25 @@ function BackBar({ onBack, label }) {
 }
 
 export function ThreadView({ store, onReply, onForward, onBack }) {
-  const { user, thread, threadLoading, openId, view, messages, toggleStar, moveMessage, setReadState, deleteForever, setThread } =
-    store;
+  const {
+    user,
+    thread,
+    threadLoading,
+    openId,
+    view,
+    messages,
+    toggleStar,
+    moveMessage,
+    setReadState,
+    deleteForever,
+    setThread,
+  } = store;
   const [expandedIds, setExpandedIds] = useState(() => new Set());
   const [, setPgpTick] = useState(0);
 
   const listItem = messages.find((m) => m.id === openId);
-  const backLabel = FOLDER_LABELS[view?.folder] || (view?.kind === "starred" ? "Starred" : view?.name) || "Back";
+  const backLabel =
+    FOLDER_LABELS[view?.folder] || (view?.kind === "starred" ? "Starred" : view?.name) || "Back";
 
   useEffect(() => {
     if (thread?.messages?.length) {
@@ -499,7 +538,9 @@ export function ThreadView({ store, onReply, onForward, onBack }) {
 
   useEffect(() => {
     if (!thread?.messages?.length || !imagesDefaultOn(user)) return;
-    const targets = thread.messages.filter((m) => !m._imagesShown && htmlHasBlockedImages(m.bodyHtml));
+    const targets = thread.messages.filter(
+      (m) => !m._imagesShown && htmlHasBlockedImages(m.bodyHtml),
+    );
     if (!targets.length) return;
     let cancelled = false;
     Promise.all(targets.map((m) => api.message(m.id, true).catch(() => null))).then((results) => {
@@ -511,7 +552,9 @@ export function ThreadView({ store, onReply, onForward, onBack }) {
       if (!byId.size) return;
       setThread({
         threadId: thread.threadId,
-        messages: thread.messages.map((x) => (byId.has(x.id) ? { ...byId.get(x.id), _imagesShown: true } : x)),
+        messages: thread.messages.map((x) =>
+          byId.has(x.id) ? { ...byId.get(x.id), _imagesShown: true } : x,
+        ),
       });
     });
     return () => {
@@ -594,9 +637,10 @@ export function ThreadView({ store, onReply, onForward, onBack }) {
           plain = await pgp.decryptArmored(m.bodyText || "");
         } catch {}
       }
-      bodyMarkup = m.hasHtml && plain.startsWith("<")
-        ? plain
-        : `<pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(plain)}</pre>`;
+      bodyMarkup =
+        m.hasHtml && plain.startsWith("<")
+          ? plain
+          : `<pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(plain)}</pre>`;
     } else if (m.bodyHtml) {
       bodyMarkup = m.bodyHtml;
     } else {
@@ -635,7 +679,13 @@ export function ThreadView({ store, onReply, onForward, onBack }) {
   return (
     <div className="em-pane em-pane-reader">
       <div className="em-reader-topbar">
-        <Button className="em-reader-back" size="sm" variant="ghost" icon={ArrowLeft} onClick={onBack}>
+        <Button
+          className="em-reader-back"
+          size="sm"
+          variant="ghost"
+          icon={ArrowLeft}
+          onClick={onBack}
+        >
           {backLabel}
         </Button>
         <div className="em-spacer" />
@@ -672,7 +722,14 @@ export function ThreadView({ store, onReply, onForward, onBack }) {
         <DropdownMenu>
           <DropdownMenu.Trigger
             render={(p) => (
-              <Button {...p} size="sm" variant="ghost" shape="square" aria-label="More" icon={DotsThree} />
+              <Button
+                {...p}
+                size="sm"
+                variant="ghost"
+                shape="square"
+                aria-label="More"
+                icon={DotsThree}
+              />
             )}
           />
           <DropdownMenu.Content>
@@ -695,7 +752,11 @@ export function ThreadView({ store, onReply, onForward, onBack }) {
             {inTrash && (
               <>
                 <DropdownMenu.Separator />
-                <DropdownMenu.Item icon={Trash} variant="danger" onClick={() => deleteForever(headerItem)}>
+                <DropdownMenu.Item
+                  icon={Trash}
+                  variant="danger"
+                  onClick={() => deleteForever(headerItem)}
+                >
                   Delete permanently
                 </DropdownMenu.Item>
               </>
