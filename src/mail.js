@@ -51,14 +51,35 @@ function firstHeader(rawHeaders, name) {
   return value;
 }
 
+function allHeaders(rawHeaders, name) {
+  const lower = name.toLowerCase();
+  const lines = String(rawHeaders || "").split(/\r?\n/);
+  const out = [];
+  let current = null;
+  for (const line of lines) {
+    if (current !== null) {
+      if (/^[ \t]/.test(line)) {
+        current += ` ${line.trim()}`;
+        continue;
+      }
+      out.push(current);
+      current = null;
+    }
+    const idx = line.indexOf(":");
+    if (idx > 0 && line.slice(0, idx).trim().toLowerCase() === lower) {
+      current = line.slice(idx + 1).trim();
+    }
+  }
+  if (current !== null) out.push(current);
+  return out;
+}
+
 function evaluateAuth(rawHeaders) {
-  const ar = (firstHeader(rawHeaders, "authentication-results") || "").toLowerCase();
+  const ars = allHeaders(rawHeaders, "authentication-results");
+  const trusted = ars.find((v) => /^mx\.cloudflare\.net[;\s]/i.test(v.trim()));
+  const ar = (trusted || "").toLowerCase();
   const grab = (re) => (ar.match(re) || [])[1] || null;
-  const spf =
-    grab(/[^-]spf=(\w+)/) ||
-    grab(/^spf=(\w+)/) ||
-    ((firstHeader(rawHeaders, "received-spf") || "").toLowerCase().match(/^\s*(\w+)/) || [])[1] ||
-    null;
+  const spf = grab(/[^-]spf=(\w+)/) || grab(/^spf=(\w+)/) || null;
   const dkim = grab(/dkim=(\w+)/);
   const dmarc = grab(/dmarc=(\w+)/);
   let status = "none";
@@ -274,15 +295,20 @@ export async function handleEmail(message, env, ctx) {
     });
 
     if (folder === "inbox" && aiSpamEnabled) {
-      const internal = await env.DB.prepare("SELECT 1 FROM addresses WHERE address = ? LIMIT 1")
-        .bind(fromAddr)
-        .first();
-      const known =
-        internal ||
-        (await env.DB.prepare("SELECT 1 FROM contacts WHERE user_id = ? AND address = ? LIMIT 1")
-          .bind(userId, fromAddr)
-          .first());
-      if (!known) {
+      let trusted = false;
+      if (auth.status === "pass") {
+        const internal = await env.DB.prepare("SELECT 1 FROM addresses WHERE address = ? LIMIT 1")
+          .bind(fromAddr)
+          .first();
+        trusted =
+          !!internal ||
+          !!(await env.DB.prepare(
+            "SELECT 1 FROM contacts WHERE user_id = ? AND address = ? LIMIT 1",
+          )
+            .bind(userId, fromAddr)
+            .first());
+      }
+      if (!trusted) {
         const verdict = await classifySpam(env, {
           from: `${fromName} <${fromAddr}>`,
           subject: parsed.subject || "",
