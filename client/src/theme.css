@@ -72,6 +72,7 @@ body {
   --text-color-kumo-placeholder: rgba(250, 236, 242, 0.36);
   --text-color-kumo-brand: #e0789f;
   --text-color-kumo-link: #86b4f2;
+  --text-color-kumo-inverse: var(--color-kumo-canvas);
 
   --em-row-active: rgba(191, 50, 100, 0.16);
   --em-row-active-bar: #d23f73;
