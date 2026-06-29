@@ -3273,7 +3273,6 @@ html[data-theme="nord"] {
 }
 
 .em-skel {
-  padding: var(--em-2) var(--em-4);
   display: flex;
   flex-direction: column;
 }
@@ -3282,14 +3281,14 @@ html[data-theme="nord"] {
   display: flex;
   align-items: flex-start;
   gap: var(--em-4);
-  padding: 14px 0;
+  padding: 14px var(--em-4);
   animation: em-skel-pulse 1.5s ease-in-out infinite;
 }
 
 .em-skel-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
   flex: none;
   background: var(--color-kumo-tint);
 }
@@ -3299,8 +3298,8 @@ html[data-theme="nord"] {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  padding-top: 4px;
+  gap: 7px;
+  padding-top: 3px;
 }
 
 .em-skel-bar {
