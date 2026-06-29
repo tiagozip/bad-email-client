@@ -4015,12 +4015,12 @@ a:focus-visible,
   padding: 0;
 }
 
-html[data-dark] .em-letter .em-shiki,
-html[data-dark] .em-letter .em-shiki span {
+html[data-mode="dark"] .em-letter .em-shiki,
+html[data-mode="dark"] .em-letter .em-shiki span {
   color: var(--shiki-dark) !important;
 }
 
-html[data-dark] .em-letter .em-shiki {
+html[data-mode="dark"] .em-letter .em-shiki {
   background-color: var(--shiki-dark-bg) !important;
 }
 

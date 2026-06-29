@@ -13,8 +13,7 @@ const LIGHT_THEMES = new Set(["sakura", "latte"]);
 function applyPalette(palette) {
   if (THEMES.includes(palette)) document.documentElement.dataset.theme = palette;
   else delete document.documentElement.dataset.theme;
-  if (LIGHT_THEMES.has(palette)) delete document.documentElement.dataset.dark;
-  else document.documentElement.dataset.dark = "true";
+  document.documentElement.dataset.mode = LIGHT_THEMES.has(palette) ? "light" : "dark";
 }
 
 function readCachedUser() {
