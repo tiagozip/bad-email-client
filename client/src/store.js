@@ -312,6 +312,42 @@ export function useMailStore(initialUser) {
     });
   }, []);
 
+  const addOptimistic = useCallback((msg) => {
+    setThread((cur) =>
+      cur && cur.threadId === msg.threadId
+        ? { ...cur, messages: [...cur.messages.filter((m) => m.id !== msg.id), msg] }
+        : cur,
+    );
+    const cached = threadCache.current.get(msg.threadId);
+    if (cached) threadCache.current.set(msg.threadId, [...cached.filter((m) => m.id !== msg.id), msg]);
+    setMessages((prev) =>
+      cache.matchView(msg, viewRef.current, Date.now())
+        ? sortMessages([msg, ...prev.filter((m) => m.id !== msg.id)])
+        : prev,
+    );
+  }, []);
+
+  const removeOptimistic = useCallback((id, threadId) => {
+    setThread((cur) =>
+      cur && cur.threadId === threadId
+        ? { ...cur, messages: cur.messages.filter((m) => m.id !== id) }
+        : cur,
+    );
+    const cached = threadCache.current.get(threadId);
+    if (cached) threadCache.current.set(threadId, cached.filter((m) => m.id !== id));
+    setMessages((prev) => prev.filter((m) => m.id !== id));
+  }, []);
+
+  const swapOptimistic = useCallback((tempId, threadId, realId) => {
+    const swap = (m) => (m.id === tempId ? { ...m, id: realId, optimistic: false } : m);
+    setThread((cur) =>
+      cur && cur.threadId === threadId ? { ...cur, messages: cur.messages.map(swap) } : cur,
+    );
+    const cached = threadCache.current.get(threadId);
+    if (cached) threadCache.current.set(threadId, cached.map(swap));
+    setMessages((prev) => prev.map(swap));
+  }, []);
+
   const removeFromList = useCallback((ids) => {
     const set = new Set(ids);
     setMessages((prev) => prev.filter((m) => !set.has(m.id)));
@@ -496,5 +532,8 @@ export function useMailStore(initialUser) {
     deleteForever,
     bulkAction,
     patchMessage,
+    addOptimistic,
+    removeOptimistic,
+    swapOptimistic,
   };
 }

@@ -489,6 +489,8 @@ export function Compose({ open, initial, user, onClose, onSent }) {
     }
     setBusy(true);
     try {
+      let payload;
+      let plain = bodyText;
       if (canE2E) {
         await lookupKeys(recipientAddrs);
         const recipientKeys = recipientAddrs.map((addr) => keyCache.current.get(addr));
@@ -498,6 +500,7 @@ export function Compose({ open, initial, user, onClose, onSent }) {
             "A recipient is missing an encryption key. Message not sent.",
             "warning",
           );
+          setBusy(false);
           return;
         }
         if (!ownKeyRef.current) {
@@ -510,11 +513,12 @@ export function Compose({ open, initial, user, onClose, onSent }) {
             "Your own encryption key is unavailable. Message not sent.",
             "warning",
           );
+          setBusy(false);
           return;
         }
-        const editorText = editorRef.current?.getText?.() ?? bodyText;
-        const armored = await pgp.encryptFor([...recipientKeys, ownKeyRef.current], editorText);
-        const resp = await api.send({
+        plain = editorRef.current?.getText?.() ?? bodyText;
+        const armored = await pgp.encryptFor([...recipientKeys, ownKeyRef.current], plain);
+        payload = {
           from,
           to: recipients,
           cc: parseRecipients(cc),
@@ -524,29 +528,51 @@ export function Compose({ open, initial, user, onClose, onSent }) {
           inReplyTo: meta.inReplyTo,
           references: meta.references || [],
           draftId: draftIdRef.current || undefined,
-          ...(sendAt ? { sendAt, skipUndo: true } : {}),
-        });
-        announce(resp, recipients, true, sendAt);
-        onSent?.(resp);
+        };
+      } else {
+        const html = bodyText.trim() || /<img/i.test(bodyHtml) ? bodyHtml : "";
+        payload = {
+          from,
+          to: recipients,
+          cc: parseRecipients(cc),
+          bcc: parseRecipients(bcc),
+          subject,
+          text: bodyText,
+          html,
+          inReplyTo: meta.inReplyTo,
+          references: meta.references || [],
+          attachmentIds: atts.filter((a) => !a.pending).map((a) => a.id),
+          draftId: draftIdRef.current || undefined,
+        };
+      }
+
+      const undoMs = Math.min(120, Math.max(0, Number(user.settings?.undoSend) || 0)) * 1000;
+      if (!sendAt && undoMs > 0) {
+        const optimistic = {
+          id: `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          threadId: `tmp-${Date.now()}`,
+          folder: "sent",
+          from: { address: from, name: user.displayName || user.username },
+          to: recipients.map((a) => ({ address: a, name: "" })),
+          cc: parseRecipients(cc).map((a) => ({ address: a, name: "" })),
+          subject: subject || "(no subject)",
+          snippet: plain.replace(/\s+/g, " ").trim().slice(0, 140),
+          bodyText: plain,
+          bodyHtml: !canE2E && (bodyText.trim() || /<img/i.test(bodyHtml)) ? bodyHtml : null,
+          hasHtml: !canE2E && bodyHtml ? 1 : 0,
+          date: Date.now(),
+          isRead: 1,
+          pgp: 0,
+          attachments: [],
+          optimistic: true,
+        };
+        onSent?.({ hold: true, undoMs, payload, optimistic });
         onClose();
         return;
       }
-      const html = bodyText.trim() || /<img/i.test(bodyHtml) ? bodyHtml : "";
-      const resp = await api.send({
-        from,
-        to: recipients,
-        cc: parseRecipients(cc),
-        bcc: parseRecipients(bcc),
-        subject,
-        text: bodyText,
-        html,
-        inReplyTo: meta.inReplyTo,
-        references: meta.references || [],
-        attachmentIds: atts.filter((a) => !a.pending).map((a) => a.id),
-        draftId: draftIdRef.current || undefined,
-        ...(sendAt ? { sendAt, skipUndo: true } : {}),
-      });
-      announce(resp, recipients, false, sendAt);
+
+      const resp = await api.send(sendAt ? { ...payload, sendAt, skipUndo: true } : payload);
+      announce(resp, recipients, canE2E, sendAt);
       onSent?.(resp);
       onClose();
     } catch (e) {

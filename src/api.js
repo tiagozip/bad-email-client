@@ -860,20 +860,15 @@ export async function handleApi(request, env, ctx) {
   if (path === "/api/send" && method === "POST") {
     try {
       const b = await readJson(request);
-      const settings = JSON.parse(user.settings_json || "{}");
-      const undoMs = clampInt(settings.undoSend, 0, 120, 0) * 1000;
-      const explicit = Number(b.sendAt) || 0;
-      let sendAt = 0;
-      if (explicit > now() + 1000) sendAt = explicit;
-      else if (undoMs > 0 && !b.skipUndo) sendAt = now() + undoMs;
-      if (sendAt) {
+      const sendAt = Number(b.sendAt) || 0;
+      if (sendAt > now() + 1000) {
         const id = uuid();
         await env.DB.prepare(
           "INSERT INTO scheduled_sends (id, user_id, payload_json, send_at, created_at) VALUES (?,?,?,?,?)",
         )
           .bind(id, user.id, JSON.stringify(b), sendAt, now())
           .run();
-        return json({ scheduled: true, id, sendAt, undoMs: explicit ? 0 : undoMs });
+        return json({ scheduled: true, id, sendAt });
       }
       const result = await sendMessage(env, user, b);
       if (b.draftId) await deleteMessageRow(env, user.id, b.draftId);

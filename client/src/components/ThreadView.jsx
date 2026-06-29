@@ -566,23 +566,33 @@ function QuickReply({ store, last, onReply, onForward, onSent }) {
     if (!att.pending) await api.deleteAttachment(att.id).catch(() => {});
   }
 
+  function clearReply() {
+    setText("");
+    setHtml("");
+    setCc("");
+    setShowCc(false);
+    setAtts([]);
+    editorRef.current?.commands.clearContent();
+  }
+
   async function send(sendAt) {
     const body = text.trim();
     const hasImg = /<img/i.test(html);
     if ((!body && !atts.length && !hasImg) || !replyTo) return;
     setSending(true);
     const subj = lastExternalSender.subject || "";
+    const fromAddr = pickFromAddress(lastExternalSender, user);
     const base = {
-      from: pickFromAddress(lastExternalSender, user),
+      from: fromAddr,
       to: [replyTo],
       cc: ccAddrs,
       subject: /^re:/i.test(subj) ? subj : `Re: ${subj}`,
       inReplyTo: last.rfcMessageId,
       references: [...(last.references || []), last.rfcMessageId].filter(Boolean),
-      ...(sendAt ? { sendAt, skipUndo: true } : {}),
     };
     try {
-      let resp;
+      let payload;
+      let plain = body;
       if (canE2E) {
         if (!ownKeyRef.current) {
           const own = await api.getPgp();
@@ -590,29 +600,53 @@ function QuickReply({ store, last, onReply, onForward, onSent }) {
         }
         if (!ownKeyRef.current) {
           notify("Cannot encrypt", "Your encryption key is unavailable.", "warning");
+          setSending(false);
           return;
         }
-        const editorText = editorRef.current?.getText?.() ?? body;
-        const armored = await pgp.encryptFor([recipKey, ownKeyRef.current], editorText);
-        resp = await api.send({ ...base, pgp: true, text: armored });
+        plain = editorRef.current?.getText?.() ?? body;
+        const armored = await pgp.encryptFor([recipKey, ownKeyRef.current], plain);
+        payload = { ...base, pgp: true, text: armored };
       } else {
-        resp = await api.send({
+        payload = {
           ...base,
           text: body,
           html: body || hasImg ? html : "",
           attachmentIds: atts.filter((a) => !a.pending).map((a) => a.id),
-        });
+        };
       }
+
+      const undoMs = Math.min(120, Math.max(0, Number(user.settings?.undoSend) || 0)) * 1000;
+      if (!sendAt && undoMs > 0) {
+        const optimistic = {
+          id: `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          threadId: thread.threadId,
+          folder: "sent",
+          from: { address: fromAddr, name: user.displayName || user.username },
+          to: [{ address: replyTo, name: "" }],
+          cc: ccAddrs.map((a) => ({ address: a, name: "" })),
+          subject: base.subject,
+          snippet: plain.replace(/\s+/g, " ").trim().slice(0, 140),
+          bodyText: plain,
+          bodyHtml: !canE2E && (body || hasImg) ? html : null,
+          hasHtml: !canE2E && html ? 1 : 0,
+          date: Date.now(),
+          isRead: 1,
+          pgp: 0,
+          attachments: [],
+          optimistic: true,
+        };
+        onSent?.({ hold: true, undoMs, payload, optimistic });
+        clearReply();
+        setSending(false);
+        return;
+      }
+
+      const resp = await api.send(sendAt ? { ...payload, sendAt, skipUndo: true } : payload);
       onSent?.(resp);
-      if ((sendAt || resp?.scheduled) && !(resp?.scheduled && resp.undoMs > 0 && !sendAt)) {
+      if (sendAt || resp?.scheduled) {
         notify("Scheduled", `Will send ${fullDate(sendAt || resp?.sendAt)}.`, "success");
       }
-      setText("");
-      setHtml("");
-      setCc("");
-      setShowCc(false);
-      setAtts([]);
-      editorRef.current?.commands.clearContent();
+      clearReply();
       if (reloadThread) reloadThread(thread.threadId);
       else openMessage({ id: store.openId, threadId: thread.threadId });
     } catch (e) {

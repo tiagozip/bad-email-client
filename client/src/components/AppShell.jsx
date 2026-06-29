@@ -50,6 +50,11 @@ function quoteBody(msg) {
 export function AppShell({ initialUser, palette, onSetPalette }) {
   const store = useMailStore(initialUser);
   const { user, setUser } = store;
+  useEffect(() => {
+    try {
+      localStorage.setItem("em-user", JSON.stringify(user));
+    } catch {}
+  }, [user]);
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeInitial, setComposeInitial] = useState(null);
   const [screen, setScreen] = useState("mail");
@@ -266,7 +271,27 @@ export function AppShell({ initialUser, palette, onSetPalette }) {
     store.syncNow();
   }
 
+  async function commitHeldSend(payload, optimistic) {
+    setUndoBar(null);
+    try {
+      const res = await api.send({ ...payload, skipUndo: true });
+      store.swapOptimistic(optimistic.id, optimistic.threadId, res.id || optimistic.id);
+      store.refreshCounts();
+      store.syncNow();
+    } catch (e) {
+      store.removeOptimistic(optimistic.id, optimistic.threadId);
+      notifyError(e);
+    }
+  }
+
   function onComposeSent(resp) {
+    if (resp?.hold) {
+      store.addOptimistic(resp.optimistic);
+      clearTimeout(undoTimer.current);
+      setUndoBar({ hold: true, payload: resp.payload, optimistic: resp.optimistic });
+      undoTimer.current = setTimeout(() => commitHeldSend(resp.payload, resp.optimistic), resp.undoMs);
+      return;
+    }
     afterMutation();
     if (resp?.scheduled && resp.undoMs > 0 && resp.id) {
       clearTimeout(undoTimer.current);
@@ -276,12 +301,17 @@ export function AppShell({ initialUser, palette, onSetPalette }) {
   }
 
   async function undoSend() {
-    const id = undoBar?.id;
+    const bar = undoBar;
     clearTimeout(undoTimer.current);
     setUndoBar(null);
-    if (!id) return;
+    if (bar?.hold) {
+      store.removeOptimistic(bar.optimistic.id, bar.optimistic.threadId);
+      notify("Send undone", "Your message was not sent.", "success");
+      return;
+    }
+    if (!bar?.id) return;
     try {
-      await api.cancelScheduled(id);
+      await api.cancelScheduled(bar.id);
       notify("Send undone", "", "success");
       afterMutation();
     } catch (e) {
