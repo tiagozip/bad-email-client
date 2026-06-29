@@ -226,6 +226,7 @@ export function Compose({ open, initial, user, onClose, onSent }) {
   const [draftId, setDraftId] = useState(null);
   const [meta, setMeta] = useState({});
   const [dragOver, setDragOver] = useState(false);
+  const [dropImages, setDropImages] = useState(null);
   const fileRef = useRef(null);
   const saveTimer = useRef(null);
   const draftIdRef = useRef(null);
@@ -384,19 +385,45 @@ export function Compose({ open, initial, user, onClose, onSent }) {
     for (const file of files) await uploadFile(file);
   }
 
+  async function addInlineImages(files) {
+    for (const file of files) {
+      try {
+        const d = await api.uploadAttachment(file);
+        editorRef.current
+          ?.chain()
+          .focus()
+          .setImage({ src: `/api/attachments/${d.id}/inline`, alt: file.name })
+          .run();
+      } catch (err) {
+        notifyError(err);
+      }
+    }
+  }
+
+  function handleFiles(files, via) {
+    dragDepth.current = 0;
+    setDragOver(false);
+    const images = files.filter((f) => f.type.startsWith("image/"));
+    const others = files.filter((f) => !f.type.startsWith("image/"));
+    if (others.length) uploadFiles(others);
+    if (!images.length) return;
+    if (via === "paste") addInlineImages(images);
+    else setDropImages(images);
+  }
+
   async function onPickFiles(e) {
     const files = [...(e.target.files || [])];
     e.target.value = "";
     await uploadFiles(files);
   }
 
-  async function onPaste(e) {
+  function onPaste(e) {
     const items = [...(e.clipboardData?.items || [])];
-    const images = items.filter((it) => it.kind === "file" && it.type.startsWith("image/"));
-    if (!images.length) return;
+    const fileItems = items.filter((it) => it.kind === "file");
+    if (!fileItems.length) return;
     e.preventDefault();
     const files = [];
-    for (const it of images) {
+    for (const it of fileItems) {
       const blob = it.getAsFile();
       if (!blob) continue;
       const ext = (blob.type.split("/")[1] || "png").split("+")[0];
@@ -405,13 +432,7 @@ export function Compose({ open, initial, user, onClose, onSent }) {
         : new File([blob], `pasted-${Date.now()}.${ext}`, { type: blob.type });
       files.push(named);
     }
-    if (!files.length) return;
-    await uploadFiles(files);
-    notify(
-      "Image attached",
-      files.length > 1 ? `${files.length} pasted images attached.` : "Pasted image attached.",
-      "success",
-    );
+    if (files.length) handleFiles(files, "paste");
   }
 
   function onDragEnter(e) {
@@ -433,13 +454,11 @@ export function Compose({ open, initial, user, onClose, onSent }) {
     if (dragDepth.current === 0) setDragOver(false);
   }
 
-  async function onDrop(e) {
+  function onDrop(e) {
     if (![...(e.dataTransfer?.types || [])].includes("Files")) return;
     e.preventDefault();
-    dragDepth.current = 0;
-    setDragOver(false);
     const files = [...(e.dataTransfer?.files || [])];
-    if (files.length) await uploadFiles(files);
+    if (files.length) handleFiles(files, "drop");
   }
 
   async function removeAtt(att) {
@@ -512,7 +531,7 @@ export function Compose({ open, initial, user, onClose, onSent }) {
         onClose();
         return;
       }
-      const html = bodyText.trim() ? bodyHtml : "";
+      const html = bodyText.trim() || /<img/i.test(bodyHtml) ? bodyHtml : "";
       const resp = await api.send({
         from,
         to: recipients,
@@ -628,12 +647,38 @@ export function Compose({ open, initial, user, onClose, onSent }) {
               setBodyHtml(html);
               setBodyText(text);
             }}
-            onFiles={(files) => {
-              dragDepth.current = 0;
-              setDragOver(false);
-              uploadFiles(files);
-            }}
+            onFiles={handleFiles}
           />
+          {dropImages && (
+            <div className="em-img-choose">
+              <span className="em-img-choose-label">
+                Add {dropImages.length} image{dropImages.length > 1 ? "s" : ""} as
+              </span>
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => {
+                  addInlineImages(dropImages);
+                  setDropImages(null);
+                }}
+              >
+                Inline
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  uploadFiles(dropImages);
+                  setDropImages(null);
+                }}
+              >
+                Attachment
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setDropImages(null)}>
+                Cancel
+              </Button>
+            </div>
+          )}
           {atts.length > 0 && (
             <div className="em-pending-atts">
               {atts.map((a) => {

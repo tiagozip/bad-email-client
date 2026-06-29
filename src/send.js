@@ -101,6 +101,32 @@ export async function sendMessage(env, user, payload) {
     : textToHtml(text);
   const signature = user.signature ? `\n\n${user.signature}` : "";
 
+  const inlineRows = [];
+  const inlineIds = [
+    ...new Set([...html.matchAll(/\/api\/attachments\/([a-z0-9-]+)\/inline/gi)].map((mm) => mm[1])),
+  ];
+  for (const id of inlineIds) {
+    const row = await env.DB.prepare("SELECT * FROM attachments WHERE id = ? AND user_id = ?")
+      .bind(id, user.id)
+      .first();
+    if (!row) continue;
+    const obj = await env.R2.get(row.r2_key);
+    if (!obj) continue;
+    const buf = await tryDecryptBytes(env, await obj.arrayBuffer());
+    attachments.push({
+      content: buf,
+      filename: row.filename,
+      type: row.mime,
+      disposition: "inline",
+      contentId: `cid${id}`,
+    });
+    inlineRows.push(row);
+  }
+  const outboundHtml = html.replace(
+    /\/api\/attachments\/([a-z0-9-]+)\/inline/gi,
+    (_mm, id) => `cid:cid${id}`,
+  );
+
   const validMsgId = (v) => typeof v === "string" && /^<[^\s<>@]+@[^\s<>]+>$/.test(v.trim());
   const inReplyTo = validMsgId(payload.inReplyTo) ? payload.inReplyTo.trim() : null;
   const headers = {};
@@ -121,7 +147,7 @@ export async function sendMessage(env, user, payload) {
     sendPayload.text = text;
   } else {
     sendPayload.text = text + signature;
-    sendPayload.html = html;
+    sendPayload.html = outboundHtml;
   }
   if (cc.length) sendPayload.cc = cc;
   if (bcc.length) sendPayload.bcc = bcc;
@@ -182,7 +208,7 @@ export async function sendMessage(env, user, payload) {
   });
 
   let attBytes = 0;
-  for (const row of attRows) {
+  for (const row of [...attRows, ...inlineRows]) {
     await env.DB.prepare("UPDATE attachments SET message_id = ?, status = 'stored' WHERE id = ?")
       .bind(messageId, row.id)
       .run();

@@ -2401,6 +2401,35 @@ html[data-theme="sakura"] {
   padding: var(--em-4) 0 0;
 }
 
+.em-rt-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--em-radius-sm);
+  margin: var(--em-2) 0;
+}
+
+.em-rt-content .ProseMirror img.ProseMirror-selectednode {
+  outline: 2px solid var(--color-kumo-brand);
+}
+
+.em-img-choose {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--em-2);
+  margin-top: var(--em-2);
+  padding: var(--em-2) var(--em-3);
+  border: 1px solid var(--color-kumo-line);
+  border-radius: var(--em-radius);
+  background: var(--color-kumo-control);
+}
+
+.em-img-choose-label {
+  font-size: 0.84rem;
+  color: var(--text-color-kumo-subtle);
+  margin-right: auto;
+}
+
 .em-rt-content .ProseMirror {
   outline: none;
   min-height: 200px;

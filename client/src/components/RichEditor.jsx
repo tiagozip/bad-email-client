@@ -12,6 +12,7 @@ import {
   TextItalic,
   TextStrikethrough,
 } from "@phosphor-icons/react";
+import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -58,6 +59,7 @@ export function RichEditor({ value, onUpdate, placeholder, onEditorReady, onFile
     extensions: [
       StarterKit.configure({ link: false }),
       Link.configure({ openOnClick: false, autolink: true, HTMLAttributes: { rel: "noopener noreferrer nofollow" } }),
+      Image.configure({ allowBase64: false, HTMLAttributes: { class: "em-rt-img" } }),
       Placeholder.configure({ placeholder: placeholder || "Write your message" }),
     ],
     content: value || "",
@@ -69,7 +71,7 @@ export function RichEditor({ value, onUpdate, placeholder, onEditorReady, onFile
         if (!files.length) return false;
         event.preventDefault();
         event.stopPropagation();
-        onFiles(files);
+        onFiles(files, "paste");
         return true;
       },
       handleDrop: (_view, event, _slice, moved) => {
@@ -78,7 +80,7 @@ export function RichEditor({ value, onUpdate, placeholder, onEditorReady, onFile
         if (!files.length) return false;
         event.preventDefault();
         event.stopPropagation();
-        onFiles(files);
+        onFiles(files, "drop");
         return true;
       },
     },
