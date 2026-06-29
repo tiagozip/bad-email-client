@@ -8,13 +8,13 @@ import * as pgp from "./pgp.js";
 import { toastManager } from "./toast.js";
 
 const THEMES = ["gold", "midnight", "sakura", "mocha", "latte", "forest", "nord"];
+const LIGHT_THEMES = new Set(["sakura", "latte"]);
 
 function applyPalette(palette) {
-  if (THEMES.includes(palette)) {
-    document.documentElement.dataset.theme = palette;
-    return;
-  }
-  delete document.documentElement.dataset.theme;
+  if (THEMES.includes(palette)) document.documentElement.dataset.theme = palette;
+  else delete document.documentElement.dataset.theme;
+  if (LIGHT_THEMES.has(palette)) delete document.documentElement.dataset.dark;
+  else document.documentElement.dataset.dark = "true";
 }
 
 function readCachedUser() {

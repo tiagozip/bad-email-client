@@ -31,7 +31,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { sanitize } from "lettersanitizer";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Letter } from "react-letter";
 import { api } from "../api.js";
 import * as pgp from "../pgp.js";
@@ -54,6 +54,8 @@ import {
 } from "../util.js";
 import { RichEditor } from "./RichEditor.jsx";
 
+const CodeHighlight = lazy(() => import("../CodeHighlight.jsx"));
+
 const ALLOWED_SCHEMAS = ["http", "https", "mailto", "cid", "tel", "data"];
 
 function blockResource() {
@@ -65,14 +67,21 @@ function passResource(url) {
 }
 
 function LetterBody({ html, allowRemote, resource }) {
+  const ref = useRef(null);
+  const hasCode = useMemo(() => /<pre[\s>]/i.test(html || ""), [html]);
   return (
-    <div className="em-letter">
+    <div className="em-letter" ref={ref}>
       <Letter
         html={html || ""}
         allowedSchemas={ALLOWED_SCHEMAS}
         rewriteExternalResources={resource || (allowRemote ? passResource : blockResource)}
         className="em-letter-inner"
       />
+      {hasCode && (
+        <Suspense fallback={null}>
+          <CodeHighlight rootRef={ref} signal={html} />
+        </Suspense>
+      )}
     </div>
   );
 }

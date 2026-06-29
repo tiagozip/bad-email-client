@@ -690,14 +690,6 @@ html[data-theme="nord"] {
   background: var(--color-kumo-canvas);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  transition:
-    border-color var(--em-fast),
-    background var(--em-fast);
-}
-
-.em-floatbar-search:focus-within {
-  border-color: var(--em-brand-soft-border);
-  background: color-mix(in srgb, var(--color-kumo-canvas) 90%, transparent);
 }
 
 .em-floatbar-icon {
@@ -713,6 +705,7 @@ html[data-theme="nord"] {
   outline: none;
   font-size: 0.95rem;
   color: var(--text-color-kumo-default);
+  caret-color: var(--color-kumo-brand);
 }
 
 .em-floatbar-input::placeholder {
@@ -4004,4 +3997,40 @@ a:focus-visible,
 
 [role="dialog"][aria-modal="false"] {
   background-color: var(--color-kumo-recessed);
+}
+
+.em-letter .em-shiki {
+  margin: var(--em-3) 0;
+  padding: var(--em-3) var(--em-4);
+  border-radius: var(--em-radius);
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  border: 1px solid var(--color-kumo-hairline);
+}
+
+.em-letter .em-shiki code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: none;
+  padding: 0;
+}
+
+html[data-dark] .em-letter .em-shiki,
+html[data-dark] .em-letter .em-shiki span {
+  color: var(--shiki-dark) !important;
+}
+
+html[data-dark] .em-letter .em-shiki {
+  background-color: var(--shiki-dark-bg) !important;
+}
+
+.em-rt-lang {
+  height: 26px;
+  border-radius: var(--em-radius-sm);
+  border: 1px solid var(--color-kumo-line);
+  background: var(--color-kumo-base);
+  color: var(--text-color-kumo-default);
+  font-size: 0.75rem;
+  padding: 0 4px;
+  cursor: pointer;
 }

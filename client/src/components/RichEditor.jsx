@@ -19,6 +19,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useEffect } from "react";
+import { CODE_LANGS } from "../codeLangs.js";
 import { HtmlBlock } from "./HtmlBlock.jsx";
 
 function ToolButton({ icon, label, active, onClick, disabled }) {
@@ -175,6 +176,28 @@ export function RichEditor({ value, onUpdate, placeholder, onEditorReady, onFile
           active={editor.isActive("codeBlock")}
           onClick={() => editor.chain().focus().toggleCodeBlock().run()}
         />
+        {editor.isActive("codeBlock") && (
+          <select
+            className="em-rt-lang"
+            aria-label="Code language"
+            value={editor.getAttributes("codeBlock").language || ""}
+            onMouseDown={(e) => e.stopPropagation()}
+            onChange={(e) =>
+              editor
+                .chain()
+                .focus()
+                .updateAttributes("codeBlock", { language: e.target.value || null })
+                .run()
+            }
+          >
+            <option value="">plain</option>
+            {CODE_LANGS.map((l) => (
+              <option key={l} value={l}>
+                {l}
+              </option>
+            ))}
+          </select>
+        )}
         <ToolButton
           icon={BracketsAngle}
           label="HTML block"
