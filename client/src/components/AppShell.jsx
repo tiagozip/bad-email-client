@@ -348,6 +348,7 @@ export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }
                 onReply={startReply}
                 onForward={startForward}
                 onBack={closeReader}
+                onSent={onComposeSent}
               />
             ) : (
               <MessageList

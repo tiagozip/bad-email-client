@@ -5,6 +5,7 @@ import {
   ArrowBendUpLeft,
   ArrowLeft,
   ArrowRight,
+  CaretDown,
   Clock,
   DotsThree,
   DownloadSimple,
@@ -34,7 +35,7 @@ import { useEffect, useRef, useState } from "react";
 import { Letter } from "react-letter";
 import { api } from "../api.js";
 import * as pgp from "../pgp.js";
-import { notifyError } from "../toast.js";
+import { notify, notifyError } from "../toast.js";
 import {
   escapeHtml,
   FOLDER_LABELS,
@@ -47,6 +48,7 @@ import {
   monoColor,
   recipientLine,
   relativeTime,
+  sendLaterPresets,
   snoozePresets,
   splitQuoted,
 } from "../util.js";
@@ -423,33 +425,19 @@ function pickFromAddress(message, user) {
   return match?.address || user?.address;
 }
 
-function QuickReply({ store, last, onReply, onForward }) {
+function QuickReply({ store, last, onReply, onForward, onSent }) {
   const { user, thread, reloadThread, openMessage } = store;
   const [text, setText] = useState("");
   const [html, setHtml] = useState("");
+  const [cc, setCc] = useState("");
+  const [showCc, setShowCc] = useState(false);
   const [sending, setSending] = useState(false);
   const [atts, setAtts] = useState([]);
+  const [dropImages, setDropImages] = useState(null);
+  const [recipKey, setRecipKey] = useState(null);
   const editorRef = useRef(null);
   const fileInput = useRef(null);
-
-  async function uploadFiles(files) {
-    for (const file of files) {
-      const tmpId = `pending-${Math.random()}`;
-      setAtts((p) => [...p, { id: tmpId, filename: file.name, size: file.size, pending: true }]);
-      try {
-        const d = await api.uploadAttachment(file);
-        setAtts((p) => p.map((a) => (a.id === tmpId ? d : a)));
-      } catch (err) {
-        setAtts((p) => p.filter((a) => a.id !== tmpId));
-        notifyError(err);
-      }
-    }
-  }
-
-  async function removeAtt(att) {
-    setAtts((p) => p.filter((a) => a.id !== att.id));
-    if (!att.pending) await api.deleteAttachment(att.id).catch(() => {});
-  }
+  const ownKeyRef = useRef(null);
 
   const selves = new Set(
     (user?.addresses?.map((a) => a.address) || [user?.address])
@@ -463,24 +451,116 @@ function QuickReply({ store, last, onReply, onForward }) {
   const replyTo = lastExternalSender.from?.address;
   const replyName = lastExternalSender.from?.name || replyTo || "sender";
 
-  async function send() {
+  useEffect(() => {
+    if (!user.pgpEnabled || !replyTo) {
+      setRecipKey(null);
+      return;
+    }
+    let cancelled = false;
+    api
+      .pgpPubkey(replyTo)
+      .then((d) => !cancelled && setRecipKey(d?.publicKey || null))
+      .catch(() => !cancelled && setRecipKey(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [replyTo, user.pgpEnabled]);
+
+  const ccAddrs = cc
+    .split(/[,\s]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const canE2E = user.pgpEnabled === true && !!recipKey && !ccAddrs.length && !atts.length;
+
+  async function uploadFiles(files) {
+    for (const file of files) {
+      const tmpId = `pending-${Math.random()}`;
+      const thumb = file.type.startsWith("image/") ? URL.createObjectURL(file) : null;
+      setAtts((p) => [...p, { id: tmpId, filename: file.name, size: file.size, pending: true, thumb }]);
+      try {
+        const d = await api.uploadAttachment(file);
+        setAtts((p) => p.map((a) => (a.id === tmpId ? { ...d, thumb } : a)));
+      } catch (err) {
+        setAtts((p) => p.filter((a) => a.id !== tmpId));
+        notifyError(err);
+      }
+    }
+  }
+
+  async function addInlineImages(files) {
+    for (const file of files) {
+      try {
+        const d = await api.uploadAttachment(file);
+        editorRef.current
+          ?.chain()
+          .focus()
+          .setImage({ src: `/api/attachments/${d.id}/inline`, alt: file.name })
+          .run();
+      } catch (err) {
+        notifyError(err);
+      }
+    }
+  }
+
+  function handleFiles(files, via) {
+    const images = files.filter((f) => f.type.startsWith("image/"));
+    const others = files.filter((f) => !f.type.startsWith("image/"));
+    if (others.length) uploadFiles(others);
+    if (!images.length) return;
+    if (via === "paste") addInlineImages(images);
+    else setDropImages(images);
+  }
+
+  async function removeAtt(att) {
+    setAtts((p) => p.filter((a) => a.id !== att.id));
+    if (!att.pending) await api.deleteAttachment(att.id).catch(() => {});
+  }
+
+  async function send(sendAt) {
     const body = text.trim();
-    if ((!body && !atts.length) || !replyTo) return;
+    const hasImg = /<img/i.test(html);
+    if ((!body && !atts.length && !hasImg) || !replyTo) return;
     setSending(true);
     const subj = lastExternalSender.subject || "";
+    const base = {
+      from: pickFromAddress(lastExternalSender, user),
+      to: [replyTo],
+      cc: ccAddrs,
+      subject: /^re:/i.test(subj) ? subj : `Re: ${subj}`,
+      inReplyTo: last.rfcMessageId,
+      references: [...(last.references || []), last.rfcMessageId].filter(Boolean),
+      ...(sendAt ? { sendAt, skipUndo: true } : {}),
+    };
     try {
-      await api.send({
-        from: pickFromAddress(lastExternalSender, user),
-        to: [replyTo],
-        subject: /^re:/i.test(subj) ? subj : `Re: ${subj}`,
-        text: body,
-        html,
-        inReplyTo: last.rfcMessageId,
-        references: [...(last.references || []), last.rfcMessageId].filter(Boolean),
-        attachmentIds: atts.filter((a) => !a.pending).map((a) => a.id),
-      });
+      let resp;
+      if (canE2E) {
+        if (!ownKeyRef.current) {
+          const own = await api.getPgp();
+          ownKeyRef.current = own?.publicKey || null;
+        }
+        if (!ownKeyRef.current) {
+          notify("Cannot encrypt", "Your encryption key is unavailable.", "warning");
+          return;
+        }
+        const editorText = editorRef.current?.getText?.() ?? body;
+        const armored = await pgp.encryptFor([recipKey, ownKeyRef.current], editorText);
+        resp = await api.send({ ...base, pgp: true, text: armored });
+      } else {
+        resp = await api.send({
+          ...base,
+          text: body,
+          html: body || hasImg ? html : "",
+          attachmentIds: atts.filter((a) => !a.pending).map((a) => a.id),
+        });
+      }
+      onSent?.(resp);
+      if ((sendAt || resp?.scheduled) && !(resp?.scheduled && resp.undoMs > 0 && !sendAt)) {
+        notify("Scheduled", `Will send ${fullDate(sendAt || resp?.sendAt)}.`, "success");
+      }
       setText("");
       setHtml("");
+      setCc("");
+      setShowCc(false);
       setAtts([]);
       editorRef.current?.commands.clearContent();
       if (reloadThread) reloadThread(thread.threadId);
@@ -492,10 +572,24 @@ function QuickReply({ store, last, onReply, onForward }) {
     }
   }
 
+  const canSend =
+    (!!text.trim() || atts.length > 0 || /<img/i.test(html)) &&
+    !!replyTo &&
+    !atts.some((a) => a.pending);
+
   return (
     <div className="em-quickreply">
+      {showCc && (
+        <input
+          className="em-quickreply-cc"
+          aria-label="Cc"
+          placeholder="Cc"
+          value={cc}
+          onChange={(e) => setCc(e.target.value)}
+        />
+      )}
       <RichEditor
-        placeholder={`Reply to ${replyName}`}
+        placeholder={canE2E ? `Reply encrypted to ${replyName}` : `Reply to ${replyName}`}
         onUpdate={({ html: h, text: t }) => {
           setHtml(h);
           setText(t);
@@ -503,26 +597,66 @@ function QuickReply({ store, last, onReply, onForward }) {
         onEditorReady={(ed) => {
           editorRef.current = ed;
         }}
-        onFiles={uploadFiles}
+        onFiles={handleFiles}
       />
+      {dropImages && (
+        <div className="em-img-choose">
+          <span className="em-img-choose-label">
+            Add {dropImages.length} image{dropImages.length > 1 ? "s" : ""} as
+          </span>
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={() => {
+              addInlineImages(dropImages);
+              setDropImages(null);
+            }}
+          >
+            Inline
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              uploadFiles(dropImages);
+              setDropImages(null);
+            }}
+          >
+            Attachment
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setDropImages(null)}>
+            Cancel
+          </Button>
+        </div>
+      )}
       {atts.length > 0 && (
         <div className="em-pending-atts">
           {atts.map((a) => (
-            <div key={a.id} className="em-att-chip">
-              <span className="em-att-name">{a.filename}</span>
-              {a.pending ? (
-                <Loader size="sm" />
-              ) : (
-                <button
-                  type="button"
-                  className="em-att-dl"
-                  aria-label="Remove attachment"
-                  onClick={() => removeAtt(a)}
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
+            <span key={a.id} className="em-pending-chip">
+              <span className="em-pending-thumb">
+                {a.pending ? (
+                  <Loader size="sm" />
+                ) : a.thumb ? (
+                  <img src={a.thumb} alt="" />
+                ) : (
+                  <FileIcon size={18} />
+                )}
+              </span>
+              <span className="em-pending-meta">
+                <span className="em-pending-name">{a.filename}</span>
+                <span className="em-pending-size">
+                  {a.pending ? "Uploading…" : humanSize(a.size)}
+                </span>
+              </span>
+              <button
+                type="button"
+                className="em-pending-x"
+                aria-label="Remove"
+                onClick={() => removeAtt(a)}
+              >
+                <X size={12} />
+              </button>
+            </span>
           ))}
         </div>
       )}
@@ -543,19 +677,48 @@ function QuickReply({ store, last, onReply, onForward }) {
           variant="primary"
           icon={PaperPlaneTilt}
           loading={sending}
-          disabled={(!text.trim() && !atts.length) || !replyTo || atts.some((a) => a.pending)}
-          onClick={send}
+          disabled={!canSend}
+          onClick={() => send()}
         >
           Send
         </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          icon={Paperclip}
-          onClick={() => fileInput.current?.click()}
-        >
+        <DropdownMenu>
+          <DropdownMenu.Trigger
+            render={(p) => (
+              <Button
+                {...p}
+                size="sm"
+                variant="ghost"
+                shape="square"
+                aria-label="Send later"
+                icon={CaretDown}
+                disabled={!canSend}
+              />
+            )}
+          />
+          <DropdownMenu.Content style={{ zIndex: 200 }}>
+            {sendLaterPresets().map((p) => (
+              <DropdownMenu.Item key={p.key} onClick={() => send(p.sendAt)}>
+                {p.label}
+              </DropdownMenu.Item>
+            ))}
+          </DropdownMenu.Content>
+        </DropdownMenu>
+        {canE2E && (
+          <Tooltip content={`Encrypted to ${replyName}`}>
+            <span className="em-quickreply-enc" aria-label="Encrypted">
+              <Lock size={13} weight="fill" />
+            </span>
+          </Tooltip>
+        )}
+        <Button size="sm" variant="ghost" icon={Paperclip} onClick={() => fileInput.current?.click()}>
           Attach
         </Button>
+        {!showCc && (
+          <button type="button" className="em-quote-toggle" onClick={() => setShowCc(true)}>
+            Cc
+          </button>
+        )}
         <button type="button" className="em-quote-toggle" onClick={() => onReply(last, "replyAll")}>
           Reply all
         </button>
@@ -577,7 +740,7 @@ function BackBar({ onBack, label }) {
   );
 }
 
-export function ThreadView({ store, onReply, onForward, onBack }) {
+export function ThreadView({ store, onReply, onForward, onBack, onSent }) {
   const {
     user,
     thread,
@@ -862,7 +1025,7 @@ export function ThreadView({ store, onReply, onForward, onBack }) {
             />
           ))}
           {headerItem.folder !== "drafts" && (
-            <QuickReply store={store} last={last} onReply={onReply} onForward={onForward} />
+            <QuickReply store={store} last={last} onReply={onReply} onForward={onForward} onSent={onSent} />
           )}
         </div>
       </div>

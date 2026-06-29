@@ -1377,8 +1377,28 @@ html[data-theme="sakura"] {
 .em-quickreply-actions {
   display: flex;
   align-items: center;
-  gap: var(--em-4);
+  gap: var(--em-3);
   margin-top: var(--em-2);
+  flex-wrap: wrap;
+}
+
+.em-quickreply-cc {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--color-kumo-hairline);
+  background: transparent;
+  outline: none;
+  color: var(--text-color-kumo-default);
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  padding: var(--em-2) 0;
+  margin-bottom: var(--em-2);
+}
+
+.em-quickreply-enc {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-color-kumo-brand);
 }
 
 .em-center {
