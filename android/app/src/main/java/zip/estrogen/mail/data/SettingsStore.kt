@@ -16,13 +16,20 @@ data class Credentials(
 
 class SettingsStore(private val context: Context) {
 
+    private val secureStore = SecureStore(context)
+
     private val keyApiKey = stringPreferencesKey("api_key")
     private val keyBaseUrl = stringPreferencesKey("base_url")
     private val keyDynamicColor = stringPreferencesKey("dynamic_color")
     private val keyPgpPublicKey = stringPreferencesKey("pgp_public_key")
 
     val credentials: Flow<Credentials?> = context.dataStore.data.map { prefs ->
-        val key = prefs[keyApiKey]
+        val legacyKey = prefs[keyApiKey]
+        if (!legacyKey.isNullOrBlank()) {
+            secureStore.apiKey = legacyKey
+            context.dataStore.edit { it.remove(keyApiKey) }
+        }
+        val key = secureStore.apiKey ?: legacyKey
         val url = prefs[keyBaseUrl] ?: DEFAULT_BASE_URL
         if (key.isNullOrBlank()) null else Credentials(key, url)
     }
@@ -36,8 +43,9 @@ class SettingsStore(private val context: Context) {
     }
 
     suspend fun save(apiKey: String, baseUrl: String) {
+        secureStore.apiKey = apiKey.trim()
         context.dataStore.edit { prefs ->
-            prefs[keyApiKey] = apiKey.trim()
+            prefs.remove(keyApiKey)
             prefs[keyBaseUrl] = baseUrl.trim().trimEnd('/').ifBlank { DEFAULT_BASE_URL }
         }
     }
@@ -56,6 +64,7 @@ class SettingsStore(private val context: Context) {
     }
 
     suspend fun clear() {
+        secureStore.clear()
         context.dataStore.edit { prefs ->
             val keep = prefs[keyDynamicColor]
             prefs.clear()

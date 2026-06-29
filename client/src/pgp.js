@@ -89,6 +89,20 @@ export async function getRememberedPass() {
   }
 }
 
+export async function scrubLegacyPass() {
+  let legacy = null;
+  try {
+    legacy = localStorage.getItem(LEGACY_PASS_KEY);
+  } catch {}
+  if (!legacy) return;
+  try {
+    await rememberPass(legacy);
+  } catch {}
+  try {
+    localStorage.removeItem(LEGACY_PASS_KEY);
+  } catch {}
+}
+
 export async function forgetPass() {
   try {
     await idbDel(PASS_ID);

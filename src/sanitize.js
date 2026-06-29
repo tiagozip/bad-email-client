@@ -2,7 +2,7 @@ const BLOCK_TAGS =
   /<\/?(?:script|style|head|title|meta|link|base|iframe|object|embed|applet|frame|frameset|noscript|svg|math|form|input|button|textarea|select|option)\b[^>]*>/gi;
 const SCRIPT_BODY = /<(script|style|head|title|noscript)\b[^>]*>[\s\S]*?<\/\1>/gi;
 const COMMENTS = /<!--[\s\S]*?-->/g;
-const ON_ATTR = /\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi;
+const ON_ATTR = /[\s/]+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi;
 const STYLE_URL = /url\s*\(\s*['"]?\s*(?:javascript|vbscript|data):/gi;
 const DANGEROUS_PROTO =
   /(href|src|action|formaction|xlink:href)\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*'|javascript:[^\s>]+|"vbscript:[^"]*"|'vbscript:[^']*')/gi;
@@ -70,7 +70,11 @@ export function sanitizeEmailHtml(html, { cidMap = {}, allowRemote = false } = {
   out = out.replace(COMMENTS, "");
   out = out.replace(SCRIPT_BODY, "");
   out = out.replace(BLOCK_TAGS, "");
-  out = out.replace(ON_ATTR, "");
+  let prev;
+  do {
+    prev = out;
+    out = out.replace(ON_ATTR, "");
+  } while (out !== prev);
   out = out.replace(DANGEROUS_PROTO, '$1="#"');
   out = out.replace(STYLE_URL, "url(");
   out = rewriteImages(out, cidMap, allowRemote);

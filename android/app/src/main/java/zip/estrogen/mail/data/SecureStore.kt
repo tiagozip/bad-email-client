@@ -45,6 +45,16 @@ class SecureStore(context: Context) {
             }
         }
 
+    var apiKey: String?
+        get() = runCatching { prefs?.getString(KEY_API, null) }.getOrNull()
+        set(value) {
+            runCatching {
+                prefs?.edit()?.apply {
+                    if (value.isNullOrBlank()) remove(KEY_API) else putString(KEY_API, value)
+                }?.apply()
+            }
+        }
+
     val hasPrivateKey: Boolean
         get() = !armoredPrivateKey.isNullOrBlank()
 
@@ -57,5 +67,6 @@ class SecureStore(context: Context) {
         private const val FILE_NAME = "estrogen_mail_secure"
         private const val KEY_PRIVATE = "pgp_private_key"
         private const val KEY_PASS = "pgp_passphrase"
+        private const val KEY_API = "api_key"
     }
 }

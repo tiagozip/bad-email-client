@@ -8,6 +8,26 @@ function b64urlEncodeStr(str) {
   return b64urlFromBytes(new TextEncoder().encode(str));
 }
 
+const PUSH_HOST_SUFFIXES = [
+  "fcm.googleapis.com",
+  "updates.push.services.mozilla.com",
+  "push.apple.com",
+  "notify.windows.com",
+  "wns.windows.com",
+];
+
+export function isAllowedPushEndpoint(endpoint) {
+  let url;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "https:") return false;
+  const host = url.hostname.toLowerCase();
+  return PUSH_HOST_SUFFIXES.some((s) => host === s || host.endsWith(`.${s}`));
+}
+
 let cachedSignKey = null;
 
 async function signingKey(env) {
@@ -51,6 +71,7 @@ export async function sendPush(env, userId, _payload) {
 
   const jwtByOrigin = new Map();
   for (const sub of subs) {
+    if (!isAllowedPushEndpoint(sub.endpoint)) continue;
     let origin;
     try {
       origin = new URL(sub.endpoint).origin;

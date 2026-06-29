@@ -30,6 +30,7 @@ import {
   userInfo,
   verifyIdToken,
 } from "./oidc.js";
+import { isAllowedPushEndpoint } from "./push.js";
 import { sanitizeEmailHtml, stripTrackers } from "./sanitize.js";
 import { sendMessage } from "./send.js";
 import {
@@ -50,6 +51,7 @@ import {
   json,
   normalizeAddr,
   now,
+  parseCookies,
   randomToken,
   snippetFrom,
   uuid,
@@ -141,9 +143,28 @@ async function attachSenderAvatars(env, items) {
 }
 
 function redirectTo(dest, extraHeaders) {
-  const headers = new Headers(extraHeaders || {});
+  const headers = extraHeaders instanceof Headers ? extraHeaders : new Headers(extraHeaders || {});
   headers.set("location", dest);
   return new Response(null, { status: 302, headers });
+}
+
+function oidcFlowCookie(state, secure) {
+  const attrs = [`oidcflow=${state}`, "Path=/", "HttpOnly", "SameSite=Lax", "Max-Age=600"];
+  if (secure) attrs.push("Secure");
+  return attrs.join("; ");
+}
+
+function clearOidcFlowCookie(secure) {
+  const attrs = ["oidcflow=", "Path=/", "HttpOnly", "SameSite=Lax", "Max-Age=0"];
+  if (secure) attrs.push("Secure");
+  return attrs.join("; ");
+}
+
+function safeEqual(a, b) {
+  if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
 }
 
 async function oidcLogin(request, env) {
@@ -157,20 +178,29 @@ async function oidcLogin(request, env) {
     expirationTtl: 600,
   });
   const dest = await authorizeUrl(env, { redirectUri, state, nonce, challenge });
-  return redirectTo(dest);
+  return redirectTo(dest, { "set-cookie": oidcFlowCookie(state, isSecure(request)) });
 }
 
 async function oidcCallback(request, env) {
   const url = new URL(request.url);
   const home = `${url.origin}/`;
   const params = url.searchParams;
+  const secure = isSecure(request);
+  const clearFlow = clearOidcFlowCookie(secure);
+  const fail = (reason) =>
+    redirectTo(`${home}?auth_error=${reason}`, { "set-cookie": clearFlow });
   const errParam = params.get("error");
-  if (errParam) return redirectTo(`${home}?auth_error=${encodeURIComponent(errParam)}`);
+  if (errParam)
+    return redirectTo(`${home}?auth_error=${encodeURIComponent(errParam)}`, {
+      "set-cookie": clearFlow,
+    });
   const state = params.get("state");
   const code = params.get("code");
-  if (!state || !code) return redirectTo(`${home}?auth_error=invalid_request`);
+  if (!state || !code) return fail("invalid_request");
+  const flowCookie = parseCookies(request).oidcflow;
+  if (!flowCookie || !safeEqual(flowCookie, state)) return fail("invalid_request");
   const raw = await env.KV.get(`oauthflow:${state}`);
-  if (!raw) return redirectTo(`${home}?auth_error=expired`);
+  if (!raw) return fail("expired");
   await env.KV.delete(`oauthflow:${state}`);
   const flow = JSON.parse(raw);
   try {
@@ -191,11 +221,16 @@ async function oidcCallback(request, env) {
     }
     const user = await upsertOidcUser(env, { ...claims, sub: verified.sub });
     const token = await createSession(env, user.id, { idToken: tokens.id_token || null });
-    return redirectTo(home, { "set-cookie": sessionCookie(token, isSecure(request)) });
+    const headers = new Headers();
+    headers.append("set-cookie", clearFlow);
+    headers.append("set-cookie", sessionCookie(token, secure));
+    return redirectTo(home, headers);
   } catch (e) {
     console.error("oidc callback error", e?.stack || e);
     const detail = encodeURIComponent(String(e?.message || e).slice(0, 200));
-    return redirectTo(`${home}?auth_error=signin_failed&detail=${detail}`);
+    return redirectTo(`${home}?auth_error=signin_failed&detail=${detail}`, {
+      "set-cookie": clearFlow,
+    });
   }
 }
 
@@ -1393,6 +1428,7 @@ export async function handleApi(request, env, ctx) {
     const p256dh = String(b.keys?.p256dh || "");
     const authKey = String(b.keys?.auth || "");
     if (!endpoint || !p256dh || !authKey) return error(400, "endpoint and keys required");
+    if (!isAllowedPushEndpoint(endpoint)) return error(400, "invalid push endpoint");
     await env.DB.prepare(
       `INSERT INTO push_subscriptions (id, user_id, endpoint, p256dh, auth, created_at) VALUES (?,?,?,?,?,?)
        ON CONFLICT(endpoint) DO UPDATE SET user_id = excluded.user_id, p256dh = excluded.p256dh, auth = excluded.auth`,
