@@ -43,6 +43,9 @@ export function useMailStore(initialUser) {
     if (!threadId) return;
     if (threadCache.current.has(threadId) || inflight.current.has(threadId)) return;
     inflight.current.add(threadId);
+    cache.getThread(threadId).then((persisted) => {
+      if (persisted && !threadCache.current.has(threadId)) threadCache.current.set(threadId, persisted);
+    });
     api
       .threadsBulk([threadId])
       .then((d) => {
@@ -101,22 +104,33 @@ export function useMailStore(initialUser) {
           setNextCursor(d.nextCursor || null);
           cache.putMessages(list).then(() => cache.pruneToCap());
           const ids = [
-            ...new Set(list.slice(0, 3).map((mm) => mm.threadId).filter(Boolean)),
+            ...new Set(list.slice(0, 8).map((mm) => mm.threadId).filter(Boolean)),
           ].filter((id) => !threadCache.current.has(id) && !inflight.current.has(id));
           if (ids.length) {
             for (const id of ids) inflight.current.add(id);
-            api
-              .threadsBulk(ids)
-              .then((r) => {
-                for (const id of ids) {
-                  const msgs = r.threads?.[id];
-                  if (msgs) threadCache.current.set(id, msgs);
-                }
-              })
-              .catch(() => {})
-              .finally(() => {
-                for (const id of ids) inflight.current.delete(id);
-              });
+            (async () => {
+              const gaps = [];
+              await Promise.all(
+                ids.map(async (id) => {
+                  const persisted = await cache.getThread(id);
+                  if (persisted) threadCache.current.set(id, persisted);
+                  else gaps.push(id);
+                }),
+              );
+              if (gaps.length) {
+                try {
+                  const r = await api.threadsBulk(gaps);
+                  for (const id of gaps) {
+                    const msgs = r.threads?.[id];
+                    if (msgs) {
+                      threadCache.current.set(id, msgs);
+                      cache.putThread(id, msgs);
+                    }
+                  }
+                } catch {}
+              }
+              for (const id of ids) inflight.current.delete(id);
+            })();
           }
         })
         .catch((e) => {
