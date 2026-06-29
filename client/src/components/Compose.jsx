@@ -275,14 +275,14 @@ export function Compose({ open, initial, user, onClose, onSent }) {
     if (editorRef.current && !editorRef.current.isDestroyed)
       editorRef.current.commands.setContent(html || "<p></p>");
     setShowCc(!!init.cc);
-    setShowBcc(false);
+    setShowBcc(!!init.bcc);
     for (const url of previews.current.values()) URL.revokeObjectURL(url);
     previews.current.clear();
     setAtts([]);
     setDragOver(false);
     dragDepth.current = 0;
-    setDraftId(null);
-    draftIdRef.current = null;
+    setDraftId(init.draftId || null);
+    draftIdRef.current = init.draftId || null;
     setMeta({ inReplyTo: init.inReplyTo, references: init.references || [] });
     keyCache.current.clear();
     setKeyMap({});
@@ -591,7 +591,7 @@ export function Compose({ open, initial, user, onClose, onSent }) {
           </div>
         )}
         <Dialog.Title className="em-display" style={{ marginBottom: 16 }}>
-          New message
+          {draftId ? "Edit draft" : "New message"}
         </Dialog.Title>
         <div className="em-compose-fields">
           <div className="em-compose-from">
@@ -743,15 +743,17 @@ export function Compose({ open, initial, user, onClose, onSent }) {
                 )}
               />
               <DropdownMenu.Content>
-                <DropdownMenu.Label>Send later</DropdownMenu.Label>
-                {sendLaterPresets().map((p) => (
-                  <DropdownMenu.Item key={p.key} onClick={() => onSend(p.sendAt)}>
-                    <span className="em-snooze-item">
-                      <span>{p.label}</span>
-                      <span className="em-snooze-when">{fullDate(p.sendAt)}</span>
-                    </span>
-                  </DropdownMenu.Item>
-                ))}
+                <DropdownMenu.Group>
+                  <DropdownMenu.Label>Send later</DropdownMenu.Label>
+                  {sendLaterPresets().map((p) => (
+                    <DropdownMenu.Item key={p.key} onClick={() => onSend(p.sendAt)}>
+                      <span className="em-snooze-item">
+                        <span>{p.label}</span>
+                        <span className="em-snooze-when">{fullDate(p.sendAt)}</span>
+                      </span>
+                    </DropdownMenu.Item>
+                  ))}
+                </DropdownMenu.Group>
               </DropdownMenu.Content>
             </DropdownMenu>
           </div>

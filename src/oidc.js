@@ -134,7 +134,7 @@ export async function verifyIdToken(env, idToken, expectedNonce) {
   if (claims.iss !== env.OIDC_ISSUER) throw new Error("bad id_token iss");
   const aud = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
   if (!aud.includes(env.OIDC_CLIENT_ID)) throw new Error("bad id_token aud");
-  if (typeof claims.exp === "number" && claims.exp * 1000 < Date.now())
+  if (typeof claims.exp === "number" && claims.exp * 1000 < Date.now() - 120000)
     throw new Error("id_token expired");
   if (claims.nonce != null && claims.nonce !== expectedNonce) throw new Error("bad id_token nonce");
   return claims;

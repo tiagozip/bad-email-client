@@ -166,14 +166,22 @@ async function oidcCallback(request, env) {
       verifier: flow.verifier,
     });
     const verified = await verifyIdToken(env, tokens.id_token, flow.nonce);
-    const claims = await userInfo(env, tokens.access_token);
-    if (String(claims.sub) !== String(verified.sub)) throw new Error("sub mismatch");
+    let claims = verified;
+    if (tokens.access_token) {
+      try {
+        const info = await userInfo(env, tokens.access_token);
+        if (String(info.sub) === String(verified.sub)) claims = { ...verified, ...info };
+      } catch (infoErr) {
+        console.error("oidc userinfo error (non-fatal)", infoErr?.message || infoErr);
+      }
+    }
     const user = await upsertOidcUser(env, { ...claims, sub: verified.sub });
     const token = await createSession(env, user.id, { idToken: tokens.id_token || null });
     return redirectTo(home, { "set-cookie": sessionCookie(token, isSecure(request)) });
   } catch (e) {
     console.error("oidc callback error", e?.stack || e);
-    return redirectTo(`${home}?auth_error=signin_failed`);
+    const detail = encodeURIComponent(String(e?.message || e).slice(0, 200));
+    return redirectTo(`${home}?auth_error=signin_failed&detail=${detail}`);
   }
 }
 

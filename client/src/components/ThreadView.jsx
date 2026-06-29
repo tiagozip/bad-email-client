@@ -708,13 +708,6 @@ function QuickReply({ store, last, onReply, onForward, onSent }) {
             </DropdownMenu.Content>
           </DropdownMenu>
         </div>
-        {canE2E && (
-          <Tooltip content={`Encrypted to ${replyName}`}>
-            <span className="em-quickreply-enc" aria-label="Encrypted">
-              <Lock size={13} weight="fill" />
-            </span>
-          </Tooltip>
-        )}
         <Button size="sm" variant="ghost" icon={Paperclip} onClick={() => fileInput.current?.click()}>
           Attach
         </Button>

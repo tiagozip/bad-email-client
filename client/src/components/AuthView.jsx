@@ -10,7 +10,9 @@ const ERRORS = {
 };
 
 export function AuthView() {
-  const errCode = new URLSearchParams(window.location.search).get("auth_error");
+  const qs = new URLSearchParams(window.location.search);
+  const errCode = qs.get("auth_error");
+  const errDetail = qs.get("detail");
   const errMsg = errCode ? ERRORS[errCode] || "Could not sign you in. Please try again." : "";
 
   return (
@@ -22,7 +24,12 @@ export function AuthView() {
           <p className="em-auth-copy">
             Sign in with your hrtID account to reach your @estrogen.delivery inbox.
           </p>
-          {errMsg && <div className="em-form-error">{errMsg}</div>}
+          {errMsg && (
+            <div className="em-form-error">
+              {errMsg}
+              {errDetail && <span className="em-form-error-detail">{errDetail}</span>}
+            </div>
+          )}
           <Button
             variant="primary"
             size="lg"

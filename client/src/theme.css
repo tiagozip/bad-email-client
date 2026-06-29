@@ -1396,12 +1396,6 @@ html[data-theme="sakura"] {
   margin-bottom: var(--em-2);
 }
 
-.em-quickreply-enc {
-  display: inline-flex;
-  align-items: center;
-  color: var(--text-color-kumo-brand);
-}
-
 .em-split {
   display: inline-flex;
   align-items: stretch;
@@ -1525,6 +1519,15 @@ html[data-theme="sakura"] {
 .em-form-error {
   color: var(--color-kumo-danger, #e5484d);
   font-size: 0.83rem;
+}
+
+.em-form-error-detail {
+  display: block;
+  margin-top: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  opacity: 0.75;
+  word-break: break-word;
 }
 
 .em-addr-preview {
@@ -2416,7 +2419,7 @@ html[data-theme="sakura"] {
   align-items: center;
   gap: 2px;
   flex-wrap: wrap;
-  padding-bottom: var(--em-2);
+  padding-bottom: 0px;
 }
 
 .em-rt-tool.is-active {
@@ -2435,7 +2438,7 @@ html[data-theme="sakura"] {
   min-height: 220px;
   max-height: 46vh;
   overflow-y: auto;
-  padding: var(--em-4) 0 0;
+  padding: 0px;
 }
 
 .em-rt-img {

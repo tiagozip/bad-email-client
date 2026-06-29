@@ -69,6 +69,29 @@ export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }
     setComposeOpen(true);
   }, []);
 
+  const openDraft = useCallback(
+    async (item) => {
+      try {
+        const { message: d } = await api.message(item.id);
+        const chips = (list) => {
+          const addrs = (list || []).map((t) => t.address).filter(Boolean);
+          return addrs.length ? `${addrs.join(", ")}, ` : "";
+        };
+        openCompose({
+          draftId: item.id,
+          to: chips(d.to),
+          cc: chips(d.cc),
+          bcc: chips(d.bcc),
+          subject: d.subject || "",
+          body: d.bodyText || "",
+        });
+      } catch (e) {
+        notifyError(e);
+      }
+    },
+    [openCompose],
+  );
+
   useEffect(() => {
     const mailto = new URLSearchParams(window.location.search).get("mailto");
     if (!mailto) return;
@@ -357,6 +380,7 @@ export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }
                 searchRef={searchRef}
                 onMenu={() => setSidebarOpen(true)}
                 onCompose={() => openCompose()}
+                onOpenDraft={openDraft}
                 floatHidden={composeOpen || settingsOpen || !!e2ePrompt}
               />
             )}

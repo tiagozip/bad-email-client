@@ -76,13 +76,13 @@ function Row({
         <div className="em-row-line">
           <span className="em-row-sender">{sender}</span>
           {handle && <span className="em-row-handle">{handle}</span>}
-          <span className="em-row-sep">·</span>
-          <span className="em-row-date">{relativeTime(item.date)}</span>
           {item.authStatus === "fail" && (
             <span className="em-spoof-tag">
               <ShieldWarning size={12} weight="fill" /> spoofed
             </span>
           )}
+          <span className="em-row-sep">·</span>
+          <span className="em-row-date">{relativeTime(item.date)}</span>
           {item._count > 1 && <span className="em-row-count">{item._count}</span>}
           {item.hasAttachments && <Paperclip className="em-row-clip" size={14} weight="bold" />}
         </div>
@@ -139,7 +139,7 @@ function BulkBar({ store }) {
   );
 }
 
-export function MessageList({ store, searchRef, onMenu, onCompose, floatHidden }) {
+export function MessageList({ store, searchRef, onMenu, onCompose, onOpenDraft, floatHidden }) {
   const {
     view,
     goView,
@@ -289,7 +289,7 @@ export function MessageList({ store, searchRef, onMenu, onCompose, floatHidden }
                 selected={selectedIds.has(item.id)}
                 selfAddresses={selfAddresses}
                 decSnippet={decSnippets[item.id]}
-                onOpen={openMessage}
+                onOpen={item.isDraft && onOpenDraft ? onOpenDraft : openMessage}
                 onPrefetch={prefetchThread}
                 onToggleSelect={toggleSelect}
                 onToggleStar={toggleStar}
