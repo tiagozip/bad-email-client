@@ -1,8 +1,9 @@
 const DB_NAME = "em-mail-cache";
-const VERSION = 1;
+const VERSION = 2;
 const MSGS = "messages";
 const META = "meta";
 const THREADS = "threads";
+const SNIPPETS = "snippets";
 const CAP = 500;
 const CURSOR_KEY = "syncCursor";
 
@@ -17,6 +18,7 @@ function db() {
       if (!d.objectStoreNames.contains(MSGS)) d.createObjectStore(MSGS, { keyPath: "id" });
       if (!d.objectStoreNames.contains(META)) d.createObjectStore(META);
       if (!d.objectStoreNames.contains(THREADS)) d.createObjectStore(THREADS);
+      if (!d.objectStoreNames.contains(SNIPPETS)) d.createObjectStore(SNIPPETS);
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -63,9 +65,38 @@ export function putMessages(items) {
 export function removeMessages(ids) {
   const list = (ids || []).filter(Boolean);
   if (!list.length) return Promise.resolve();
+  writeStore(SNIPPETS, (s) => {
+    for (const id of list) s.delete(id);
+  });
   return writeStore(MSGS, (s) => {
     for (const id of list) s.delete(id);
   });
+}
+
+export async function getSnippets(ids) {
+  const out = {};
+  try {
+    const d = await db();
+    await Promise.all(
+      (ids || []).map(
+        (id) =>
+          new Promise((res) => {
+            const r = d.transaction(SNIPPETS, "readonly").objectStore(SNIPPETS).get(id);
+            r.onsuccess = () => {
+              if (r.result) out[id] = r.result;
+              res();
+            };
+            r.onerror = () => res();
+          }),
+      ),
+    );
+  } catch {}
+  return out;
+}
+
+export function putSnippet(id, blob) {
+  if (!id || !blob) return Promise.resolve();
+  return writeStore(SNIPPETS, (s) => s.put(blob, id));
 }
 
 export async function getCursor() {

@@ -16,6 +16,7 @@ import {
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api.js";
+import * as cache from "../cache.js";
 import * as pgp from "../pgp.js";
 import { FOLDER_LABELS, groupThreads, initials, monoColor, relativeTime, senderLabel } from "../util.js";
 
@@ -172,25 +173,39 @@ export function MessageList({ store, searchRef, onMenu, onCompose, onOpenDraft, 
       }
       const pending = messages.filter((m) => m.pgp && decSnippets[m.id] === undefined);
       if (!pending.length) return;
+      const stored = await cache.getSnippets(pending.map((m) => m.id));
       const updates = {};
+      const toPersist = [];
       for (const m of pending) {
+        if (cancelled) return;
         try {
+          if (stored[m.id]) {
+            updates[m.id] = await pgp.localDecrypt(stored[m.id]);
+            continue;
+          }
+          let text;
           if (m.snippetEnc) {
-            updates[m.id] = await pgp.decryptArmored(m.snippetEnc);
+            text = await pgp.decryptArmored(m.snippetEnc);
           } else {
             const full = await api.message(m.id);
-            const dec = await pgp.decryptArmored(full.message?.bodyText || "");
-            updates[m.id] = dec
+            text = (await pgp.decryptArmored(full.message?.bodyText || ""))
               .replace(/<[^>]+>/g, " ")
               .replace(/\s+/g, " ")
               .trim()
               .slice(0, 140);
           }
+          updates[m.id] = text;
+          if (text) toPersist.push([m.id, text]);
         } catch {
           updates[m.id] = null;
         }
       }
       if (!cancelled) setDecSnippets((prev) => ({ ...prev, ...updates }));
+      for (const [id, text] of toPersist) {
+        try {
+          cache.putSnippet(id, await pgp.localEncrypt(text));
+        } catch {}
+      }
     }
     run();
     return () => {

@@ -98,6 +98,21 @@ export async function forgetPass() {
   } catch {}
 }
 
+export async function localEncrypt(text) {
+  const key = await deviceKey();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(text)),
+  );
+  return { iv, ct };
+}
+
+export async function localDecrypt(blob) {
+  const key = await deviceKey();
+  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: blob.iv }, key, blob.ct);
+  return new TextDecoder().decode(pt);
+}
+
 export async function generateIdentity(name, email, passphrase) {
   const { publicKey, privateKey } = await openpgp.generateKey({
     type: "ecc",
