@@ -1,5 +1,5 @@
 import { Button, Input } from "@cloudflare/kumo";
-import { Check, Copy, X } from "@phosphor-icons/react";
+import { Check, Copy, RocketLaunch, X } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "../api.js";
@@ -136,15 +136,22 @@ export function ByodSetup({ open, existing, onClose, onDone }) {
         </div>
         <div className="em-label-head">
           <h2 className="em-label-title">Bring your own domain</h2>
-          <Button size="sm" variant="ghost" shape="square" aria-label="Close" icon={X} onClick={close} />
+          <Button
+            size="sm"
+            variant="ghost"
+            shape="square"
+            aria-label="Close"
+            icon={X}
+            onClick={close}
+          />
         </div>
 
         {step === 1 && (
           <div className="em-setup-body">
             <p className="em-card-sub">
-              Use a domain on <strong>your own</strong> Cloudflare account. You'll deploy a tiny Worker
-              with one click that bridges it to your mailbox here, for sending and receiving. Nothing
-              leaves your account.
+              Use a domain on <strong>your own</strong> Cloudflare account. You'll deploy a tiny
+              Worker with one click that bridges it to your mailbox here, for sending and receiving.
+              Nothing leaves your account.
             </p>
             <Input
               autoFocus
@@ -166,40 +173,48 @@ export function ByodSetup({ open, existing, onClose, onDone }) {
         {step === 2 && created && (
           <div className="em-setup-body">
             <div className="em-byod-block">
-              <div className="em-byod-block-title">1. Deploy the Worker to your account</div>
-              <a className="em-byod-deploy" href={created.deployUrl} target="_blank" rel="noreferrer">
-                <img
-                  src="https://deploy.workers.cloudflare.com/button"
-                  alt="Deploy to Cloudflare"
-                  height={32}
-                />
-              </a>
+              <div className="em-byod-block-title">1. Install the Worker</div>
+              
+              <Button
+                variant="primary"
+                icon={RocketLaunch}
+                onClick={() => window.open(created.deployUrl, "_blank", "noopener,noreferrer")}
+              >
+                Deploy to Cloudflare
+              </Button>
+            </div>
+
+            <div className="em-byod-block">
+              <div className="em-byod-block-title">2. Use this as "RELAY_CONFIG"</div>
               <p className="em-byod-hint">
-                When it asks for <code className="em-inline-code">RELAY_CONFIG</code>, paste this. It's
-                the only thing to set.
+                When Cloudflare asks you for <code className="em-inline-code">RELAY_CONFIG</code>,
+                copy this and paste it there.
               </p>
               <CopyField value={created.relayConfig} />
             </div>
 
             <div className="em-byod-block">
-              <div className="em-byod-block-title">2. Turn on email for {created.domain}</div>
+              <div className="em-byod-block-title">3. Set up Email Routing and Sending</div>
               <p className="em-byod-hint">
-                In the Cloudflare dashboard, open <strong>{created.domain} → Email</strong>:
+                In Cloudflare, go to <strong>{created.domain} → Email</strong> and do both:
               </p>
               <ul className="em-byod-steps">
                 <li>
-                  <strong>Email Routing</strong> → set the catch-all action to{" "}
-                  <strong>Send to a Worker</strong> → pick <strong>email-worker</strong>.
+                  <strong>Email Routing</strong>: open <strong>Routing rules</strong>, edit the{" "}
+                  <strong>Catch-all address</strong>, set its action to{" "}
+                  <strong>Send to a Worker</strong>, and choose <strong>email-worker</strong>. This
+                  lets you receive mail.
                 </li>
                 <li>
-                  <strong>Email Sending</strong> → enable it for the domain so it can send with DKIM.
+                  <strong>Email Sending</strong>: turn it <strong>on</strong> for {created.domain}.
+                  This lets you send with a valid signature.
                 </li>
               </ul>
             </div>
 
             {error && <div className="em-form-error">{error}</div>}
             <Button variant="primary" onClick={() => setStep(3)}>
-              I've done both
+              Done, continue
             </Button>
           </div>
         )}
@@ -207,8 +222,12 @@ export function ByodSetup({ open, existing, onClose, onDone }) {
         {step === 3 && created && (
           <div className="em-setup-body">
             <p className="em-card-sub">
-              Paste your Worker's URL. We'll send a verification email to {created.domain} and confirm
-              it routes back through your Worker. No DNS records needed.
+              Last step. Paste your Worker's URL and we'll send a quick verification email to{" "}
+              {created.domain} to confirm everything routes back. No DNS records needed.
+            </p>
+            <p className="em-byod-hint">
+              Find it in Cloudflare under <strong>Workers &amp; Pages → email-worker</strong> (the{" "}
+              <code className="em-inline-code">.workers.dev</code> URL near the top).
             </p>
             <Input
               autoFocus

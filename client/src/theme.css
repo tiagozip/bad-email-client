@@ -4081,11 +4081,6 @@ html[data-mode="dark"] .em-letter .em-shiki {
   padding: 6px 8px;
 }
 
-.em-byod-deploy {
-  display: inline-flex;
-  width: fit-content;
-}
-
 .em-inline-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.78em;
