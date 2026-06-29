@@ -47,7 +47,7 @@ function quoteBody(msg) {
   return `\n\nOn ${date}, ${who} wrote:\n${quoted}`;
 }
 
-export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }) {
+export function AppShell({ initialUser, palette, onSetPalette }) {
   const store = useMailStore(initialUser);
   const { user, setUser } = store;
   const [composeOpen, setComposeOpen] = useState(false);
@@ -391,8 +391,6 @@ export function AppShell({ initialUser, mode, onSetMode, palette, onSetPalette }
         open={settingsOpen}
         user={user}
         setUser={setUser}
-        mode={mode}
-        onSetMode={onSetMode}
         palette={palette}
         onSetPalette={onSetPalette}
         onClose={goBack}

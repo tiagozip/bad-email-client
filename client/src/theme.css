@@ -45,7 +45,7 @@ body {
   letter-spacing: -0.02em;
 }
 
-html[data-mode="dark"] {
+:root {
   --color-kumo-canvas: #1d171f;
   --color-kumo-elevated: #231c26;
   --color-kumo-recessed: #19141b;
@@ -79,39 +79,6 @@ html[data-mode="dark"] {
   --em-brand-soft-border: rgba(224, 120, 159, 0.28);
   --em-star: #f0c259;
   --em-shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(250, 236, 242, 0.04) inset;
-}
-
-html[data-mode="light"] {
-  --color-kumo-canvas: #fbf3f7;
-  --color-kumo-elevated: #ffffff;
-  --color-kumo-recessed: #f5ebf0;
-  --color-kumo-base: #ffffff;
-  --color-kumo-tint: #f6eaf1;
-  --color-kumo-control: #ffffff;
-  --color-kumo-interact: rgba(40, 15, 28, 0.18);
-  --color-kumo-fill: #f1dde8;
-  --color-kumo-fill-hover: #ead0de;
-  --color-kumo-line: rgba(40, 15, 28, 0.12);
-  --color-kumo-hairline: rgba(40, 15, 28, 0.07);
-
-  --color-kumo-brand: #bf3264;
-  --color-kumo-brand-hover: #a82a55;
-  --kumo-button-emphasis-bg: #bf3264;
-  --kumo-button-emphasis-ring: rgba(191, 50, 100, 0.35);
-
-  --text-color-kumo-default: #2a1822;
-  --text-color-kumo-strong: #1c0f16;
-  --text-color-kumo-subtle: #6e5662;
-  --text-color-kumo-inactive: #b79caa;
-  --text-color-kumo-placeholder: #a98a98;
-  --text-color-kumo-brand: #bf3264;
-
-  --em-row-active: rgba(191, 50, 100, 0.1);
-  --em-row-active-bar: #bf3264;
-  --em-brand-soft: rgba(191, 50, 100, 0.08);
-  --em-brand-soft-border: rgba(191, 50, 100, 0.28);
-  --em-star: #e0a020;
-  --em-shadow-pop: 0 14px 44px rgba(40, 15, 28, 0.16);
 }
 
 html[data-theme="gold"] {
@@ -220,6 +187,150 @@ html[data-theme="sakura"] {
   --em-brand-soft-border: rgba(208, 90, 134, 0.28);
   --em-star: #e0a020;
   --em-shadow-pop: 0 14px 44px rgba(58, 22, 38, 0.16);
+}
+
+html[data-theme="mocha"] {
+  --color-kumo-canvas: #1e1e2e;
+  --color-kumo-elevated: #262637;
+  --color-kumo-recessed: #181825;
+  --color-kumo-base: #313244;
+  --color-kumo-tint: #313244;
+  --color-kumo-overlay: #45475a;
+  --color-kumo-control: #181825;
+  --color-kumo-interact: rgba(205, 214, 244, 0.18);
+  --color-kumo-fill: #313244;
+  --color-kumo-fill-hover: #45475a;
+  --color-kumo-line: rgba(205, 214, 244, 0.12);
+  --color-kumo-hairline: rgba(205, 214, 244, 0.07);
+  --color-kumo-contrast: #cdd6f4;
+
+  --color-kumo-brand: #cba6f7;
+  --color-kumo-brand-hover: #d6b8fa;
+  --kumo-button-emphasis-bg: #cba6f7;
+  --kumo-button-emphasis-ring: rgba(203, 166, 247, 0.4);
+
+  --text-color-kumo-default: #cdd6f4;
+  --text-color-kumo-strong: #e6eafc;
+  --text-color-kumo-subtle: #a6adc8;
+  --text-color-kumo-inactive: rgba(166, 173, 200, 0.45);
+  --text-color-kumo-placeholder: rgba(166, 173, 200, 0.6);
+  --text-color-kumo-brand: #cba6f7;
+  --text-color-kumo-link: #89b4fa;
+
+  --em-row-active: rgba(203, 166, 247, 0.16);
+  --em-row-active-bar: #cba6f7;
+  --em-brand-soft: rgba(203, 166, 247, 0.14);
+  --em-brand-soft-border: rgba(203, 166, 247, 0.28);
+  --em-star: #f9e2af;
+  --em-shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme="latte"] {
+  --color-kumo-canvas: #eff1f5;
+  --color-kumo-elevated: #ffffff;
+  --color-kumo-recessed: #e6e9ef;
+  --color-kumo-base: #ffffff;
+  --color-kumo-tint: #e6e9ef;
+  --color-kumo-overlay: #dce0e8;
+  --color-kumo-control: #ffffff;
+  --color-kumo-interact: rgba(76, 79, 105, 0.18);
+  --color-kumo-fill: #e6e9ef;
+  --color-kumo-fill-hover: #dce0e8;
+  --color-kumo-line: rgba(76, 79, 105, 0.12);
+  --color-kumo-hairline: rgba(76, 79, 105, 0.07);
+  --color-kumo-contrast: #4c4f69;
+
+  --color-kumo-brand: #8839ef;
+  --color-kumo-brand-hover: #7a2fe0;
+  --kumo-button-emphasis-bg: #8839ef;
+  --kumo-button-emphasis-ring: rgba(136, 57, 239, 0.35);
+
+  --text-color-kumo-default: #4c4f69;
+  --text-color-kumo-strong: #2c2f44;
+  --text-color-kumo-subtle: #6c6f85;
+  --text-color-kumo-inactive: #9ca0b0;
+  --text-color-kumo-placeholder: #8c8fa1;
+  --text-color-kumo-brand: #8839ef;
+  --text-color-kumo-link: #1e66f5;
+
+  --em-row-active: rgba(136, 57, 239, 0.1);
+  --em-row-active-bar: #8839ef;
+  --em-brand-soft: rgba(136, 57, 239, 0.08);
+  --em-brand-soft-border: rgba(136, 57, 239, 0.28);
+  --em-star: #df8e1d;
+  --em-shadow-pop: 0 14px 44px rgba(76, 79, 105, 0.16);
+}
+
+html[data-theme="forest"] {
+  --color-kumo-canvas: #2d353b;
+  --color-kumo-elevated: #343f44;
+  --color-kumo-recessed: #232a2e;
+  --color-kumo-base: #3a464c;
+  --color-kumo-tint: #3d484d;
+  --color-kumo-overlay: #475258;
+  --color-kumo-control: #232a2e;
+  --color-kumo-interact: rgba(211, 198, 170, 0.16);
+  --color-kumo-fill: #3d484d;
+  --color-kumo-fill-hover: #475258;
+  --color-kumo-line: rgba(211, 198, 170, 0.12);
+  --color-kumo-hairline: rgba(211, 198, 170, 0.06);
+  --color-kumo-contrast: #d3c6aa;
+
+  --color-kumo-brand: #a7c080;
+  --color-kumo-brand-hover: #b6cd92;
+  --kumo-button-emphasis-bg: #a7c080;
+  --kumo-button-emphasis-ring: rgba(167, 192, 128, 0.4);
+
+  --text-color-kumo-default: #d3c6aa;
+  --text-color-kumo-strong: #e8ddc4;
+  --text-color-kumo-subtle: #9aa79d;
+  --text-color-kumo-inactive: rgba(133, 146, 137, 0.55);
+  --text-color-kumo-placeholder: rgba(133, 146, 137, 0.7);
+  --text-color-kumo-brand: #a7c080;
+  --text-color-kumo-link: #83c092;
+
+  --em-row-active: rgba(167, 192, 128, 0.16);
+  --em-row-active-bar: #a7c080;
+  --em-brand-soft: rgba(167, 192, 128, 0.14);
+  --em-brand-soft-border: rgba(167, 192, 128, 0.28);
+  --em-star: #dbbc7f;
+  --em-shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="nord"] {
+  --color-kumo-canvas: #2e3440;
+  --color-kumo-elevated: #353c4a;
+  --color-kumo-recessed: #272c36;
+  --color-kumo-base: #3b4252;
+  --color-kumo-tint: #3b4252;
+  --color-kumo-overlay: #434c5e;
+  --color-kumo-control: #272c36;
+  --color-kumo-interact: rgba(216, 222, 233, 0.16);
+  --color-kumo-fill: #3b4252;
+  --color-kumo-fill-hover: #434c5e;
+  --color-kumo-line: rgba(216, 222, 233, 0.12);
+  --color-kumo-hairline: rgba(216, 222, 233, 0.06);
+  --color-kumo-contrast: #eceff4;
+
+  --color-kumo-brand: #88c0d0;
+  --color-kumo-brand-hover: #9ad0e0;
+  --kumo-button-emphasis-bg: #88c0d0;
+  --kumo-button-emphasis-ring: rgba(136, 192, 208, 0.4);
+
+  --text-color-kumo-default: #d8dee9;
+  --text-color-kumo-strong: #eceff4;
+  --text-color-kumo-subtle: #9099a8;
+  --text-color-kumo-inactive: rgba(144, 153, 168, 0.5);
+  --text-color-kumo-placeholder: rgba(144, 153, 168, 0.65);
+  --text-color-kumo-brand: #88c0d0;
+  --text-color-kumo-link: #81a1c1;
+
+  --em-row-active: rgba(136, 192, 208, 0.16);
+  --em-row-active-bar: #88c0d0;
+  --em-brand-soft: rgba(136, 192, 208, 0.14);
+  --em-brand-soft-border: rgba(136, 192, 208, 0.28);
+  --em-star: #ebcb8b;
+  --em-shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.5);
 }
 
 * {
@@ -577,7 +688,7 @@ html[data-theme="sakura"] {
   padding: 0 var(--em-4);
   border-radius: 999px;
   border: 1px solid var(--color-kumo-line);
-  background: color-mix(in srgb, var(--color-kumo-canvas) 78%, transparent);
+  background: var(--color-kumo-canvas);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   transition:
@@ -2411,7 +2522,7 @@ html[data-theme="sakura"] {
 .em-rt {
   display: flex;
   flex-direction: column;
-  margin-top: var(--em-3);
+  margin-top: 0px;
 }
 
 .em-rt-toolbar {
@@ -2439,6 +2550,7 @@ html[data-theme="sakura"] {
   max-height: 46vh;
   overflow-y: auto;
   padding: 0px;
+  margin-top: var(--em-2);
 }
 
 .em-rt-img {
@@ -2713,7 +2825,7 @@ html[data-theme="sakura"] {
   align-items: center;
   gap: var(--em-3);
   padding: var(--em-2) 0;
-  border-bottom: 1px solid var(--color-kumo-hairline);
+  padding-bottom: 0px;
 }
 
 .em-compose-from > label {

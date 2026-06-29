@@ -6,14 +6,12 @@ import {
   ClockCountdown,
   FileText,
   Gear,
-  Moon,
   PaperPlaneTilt,
   PencilSimple,
   Plus,
   ShieldCheck,
   SignOut,
   Star,
-  Sun,
   Trash,
   Tray,
   Warning,
@@ -42,8 +40,6 @@ function activeKey(view) {
 
 export function MailSidebar({
   store,
-  mode,
-  onToggleMode,
   onOpenSettings,
   onOpenAdmin,
   onOpenScheduled,
@@ -161,9 +157,6 @@ export function MailSidebar({
                 Admin
               </DropdownMenu.Item>
             )}
-            <DropdownMenu.Item icon={mode === "dark" ? Sun : Moon} onClick={onToggleMode}>
-              {mode === "dark" ? "Light mode" : "Dark mode"}
-            </DropdownMenu.Item>
             <DropdownMenu.Separator />
             <DropdownMenu.Item icon={SignOut} variant="danger" onClick={onSignOut}>
               Sign out

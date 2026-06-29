@@ -7,7 +7,7 @@ import { AuthView } from "./components/AuthView.jsx";
 import * as pgp from "./pgp.js";
 import { toastManager } from "./toast.js";
 
-const THEMES = ["gold", "midnight", "sakura"];
+const THEMES = ["gold", "midnight", "sakura", "mocha", "latte", "forest", "nord"];
 
 function applyPalette(palette) {
   if (THEMES.includes(palette)) {
@@ -20,13 +20,7 @@ function applyPalette(palette) {
 export function App() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
-  const [mode, setMode] = useState(() => localStorage.getItem("em-mode") || "dark");
   const [palette, setPalette] = useState(() => localStorage.getItem("em-palette") || "plum");
-
-  useEffect(() => {
-    document.documentElement.dataset.mode = mode;
-    localStorage.setItem("em-mode", mode);
-  }, [mode]);
 
   useEffect(() => {
     applyPalette(palette);
@@ -46,10 +40,8 @@ export function App() {
         if (d.user) {
           await cache.initCursor(d.syncCursor);
           setUser(d.user);
-          const t = d.user.settings?.theme;
-          if (t === "dark" || t === "light") setMode(t);
           const p = d.user.settings?.palette;
-          if (p) setPalette(THEMES.includes(p) ? p : "plum");
+          if (p) setPalette(p === "plum" || THEMES.includes(p) ? p : "plum");
           if (d.user.settings?.imagesDefault !== undefined) {
             localStorage.setItem("em-images-default", d.user.settings.imagesDefault ? "1" : "0");
           }
@@ -81,8 +73,6 @@ export function App() {
           <AppShell
             key={user.id}
             initialUser={user}
-            mode={mode}
-            onSetMode={setMode}
             palette={palette}
             onSetPalette={setPalette}
           />

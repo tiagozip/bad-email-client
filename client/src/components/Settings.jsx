@@ -38,9 +38,13 @@ import { humanSize, initials, monoColor, relativeTime } from "../util.js";
 
 const PALETTES = [
   { id: "plum", name: "Plum", canvas: "#1d171f", brand: "#bf3264" },
-  { id: "gold", name: "Gold", canvas: "#1e1a14", brand: "#c4a030" },
   { id: "midnight", name: "Midnight", canvas: "#12141f", brand: "#6b8cff" },
+  { id: "mocha", name: "Mocha", canvas: "#1e1e2e", brand: "#cba6f7" },
+  { id: "nord", name: "Nord", canvas: "#2e3440", brand: "#88c0d0" },
+  { id: "forest", name: "Forest", canvas: "#2d353b", brand: "#a7c080" },
+  { id: "gold", name: "Gold", canvas: "#1e1a14", brand: "#c4a030" },
   { id: "sakura", name: "Sakura", canvas: "#fbf1f3", brand: "#d05a86" },
+  { id: "latte", name: "Latte", canvas: "#eff1f5", brand: "#8839ef" },
 ];
 
 function ApiKeys() {
@@ -90,7 +94,7 @@ function ApiKeys() {
       <div className="em-card-head">
         <h2 className="em-card-title">Developer API</h2>
         <p className="em-card-sub">
-          Use these endpoints programmatically. Base URL https://mail.estrogen.delivery/api .
+          Use these endpoints programmatically with the base URL https://mail.estrogen.delivery/api.
           Authenticate with header Authorization: Bearer &lt;key&gt; or X-API-Key: &lt;key&gt;.
         </p>
       </div>
@@ -245,9 +249,7 @@ function Addresses({ user, setUser }) {
     <div className="em-card">
       <div className="em-card-head">
         <h2 className="em-card-title">Addresses</h2>
-        <p className="em-card-sub">
-          Send and receive from any of these. Mail to all of them lands in this inbox.
-        </p>
+        <p className="em-card-sub">Send and receive from unlimited email aliases.</p>
       </div>
       {!addresses ? (
         <Loader size="sm" />
@@ -565,7 +567,7 @@ function Encryption({ user, setUser }) {
             <div className="em-pgp-status-copy">
               <div className="em-pgp-status-title">Encryption is on</div>
               <div className="em-pgp-status-sub">
-                Disabling does not decrypt mail that is already stored encrypted.
+                Disabling doesn't decrypt mail that is already encrypted.
               </div>
             </div>
             {confirmDisable ? (
@@ -848,8 +850,7 @@ function Notifications() {
       <div className="em-card-head">
         <h2 className="em-card-title">Notifications</h2>
         <p className="em-card-sub">
-          Get a browser notification when new mail arrives, even when this tab is closed. Works per
-          device and browser.
+          Get a browser notification when new mail arrives, even when this tab is closed.
         </p>
       </div>
       {!supported ? (
@@ -987,6 +988,7 @@ function DomainSetupModal({ open, existing, onClose, onDone }) {
       }}
     >
       <div className="em-modal-panel em-setup-dialog">
+        <div className="em-setup-progress">Step {step} of 3</div>
         <div className="em-label-head">
           <h2 className="em-label-title">Add a domain</h2>
           <Button
@@ -998,7 +1000,6 @@ function DomainSetupModal({ open, existing, onClose, onDone }) {
             onClick={onClose}
           />
         </div>
-        <div className="em-setup-progress">Step {step} of 3</div>
 
         {step === 1 && (
           <div className="em-setup-body">
@@ -1291,7 +1292,7 @@ const SECTIONS = [
   { id: "developer", label: "Developer", icon: Code },
 ];
 
-export function Settings({ open, user, setUser, mode, onSetMode, palette, onSetPalette, onClose }) {
+export function Settings({ open, user, setUser, palette, onSetPalette, onClose }) {
   const [displayName, setDisplayName] = useState(user.displayName || "");
   const [signature, setSignature] = useState(user.signature || "");
   const [imagesDefault, setImagesDefault] = useState(!!user.settings?.imagesDefault);
@@ -1339,7 +1340,7 @@ export function Settings({ open, user, setUser, mode, onSetMode, palette, onSetP
       const data = await api.saveSettings({
         displayName,
         signature,
-        settings: { ...user.settings, theme: mode, palette, imagesDefault, catchAll, undoSend },
+        settings: { ...user.settings, palette, imagesDefault, catchAll, undoSend },
       });
       setUser(data.user);
       localStorage.setItem("em-images-default", imagesDefault ? "1" : "0");
@@ -1357,7 +1358,7 @@ export function Settings({ open, user, setUser, mode, onSetMode, palette, onSetP
       const data = await api.saveSettings({
         displayName,
         signature,
-        settings: { ...user.settings, theme: mode, palette, imagesDefault, catchAll: v },
+        settings: { ...user.settings, palette, imagesDefault, catchAll: v },
       });
       setUser(data.user);
     } catch (e) {
@@ -1374,7 +1375,7 @@ export function Settings({ open, user, setUser, mode, onSetMode, palette, onSetP
       const data = await api.saveSettings({
         displayName,
         signature,
-        settings: { ...user.settings, theme: mode, palette, imagesDefault, catchAll, undoSend: n },
+        settings: { ...user.settings, palette, imagesDefault, catchAll, undoSend: n },
       });
       setUser(data.user);
     } catch (e) {
@@ -1389,7 +1390,7 @@ export function Settings({ open, user, setUser, mode, onSetMode, palette, onSetP
       const data = await api.saveSettings({
         displayName,
         signature,
-        settings: { ...user.settings, theme: mode, palette, imagesDefault, catchAll, aiSpam: v },
+        settings: { ...user.settings, palette, imagesDefault, catchAll, aiSpam: v },
       });
       setUser(data.user);
     } catch (e) {
@@ -1404,7 +1405,7 @@ export function Settings({ open, user, setUser, mode, onSetMode, palette, onSetP
       const data = await api.saveSettings({
         displayName,
         signature,
-        settings: { ...user.settings, theme: mode, palette: id, imagesDefault, catchAll },
+        settings: { ...user.settings, palette: id, imagesDefault, catchAll },
       });
       setUser(data.user);
     } catch (e) {
@@ -1583,20 +1584,6 @@ export function Settings({ open, user, setUser, mode, onSetMode, palette, onSetP
                         );
                       })}
                     </div>
-                  </div>
-                  <div className="em-toggle-row">
-                    <div className="em-toggle-copy">
-                      <div className="em-toggle-title">Dark mode</div>
-                      <div className="em-toggle-sub">
-                        Toggles the deep plum theme between dark and light. Applies to the Plum
-                        theme.
-                      </div>
-                    </div>
-                    <Switch
-                      aria-label="Dark mode"
-                      checked={mode === "dark"}
-                      onCheckedChange={(v) => onSetMode(v ? "dark" : "light")}
-                    />
                   </div>
                   <div className="em-toggle-row">
                     <div className="em-toggle-copy">
