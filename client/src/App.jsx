@@ -17,9 +17,17 @@ function applyPalette(palette) {
   delete document.documentElement.dataset.theme;
 }
 
+function readCachedUser() {
+  try {
+    return JSON.parse(localStorage.getItem("em-user") || "null");
+  } catch {
+    return null;
+  }
+}
+
 export function App() {
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(readCachedUser);
+  const [ready, setReady] = useState(() => !!readCachedUser());
   const [palette, setPalette] = useState(() => localStorage.getItem("em-palette") || "plum");
 
   useEffect(() => {
@@ -40,6 +48,9 @@ export function App() {
         if (d.user) {
           await cache.initCursor(d.syncCursor);
           setUser(d.user);
+          try {
+            localStorage.setItem("em-user", JSON.stringify(d.user));
+          } catch {}
           const p = d.user.settings?.palette;
           if (p) setPalette(p === "plum" || THEMES.includes(p) ? p : "plum");
           if (d.user.settings?.imagesDefault !== undefined) {
@@ -56,16 +67,21 @@ export function App() {
               }
             }
           }
+        } else {
+          setUser(null);
+          try {
+            localStorage.removeItem("em-user");
+          } catch {}
         }
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => setReady(true));
   }, []);
 
   return (
     <TooltipProvider>
       <Toasty toastManager={toastManager}>
-        {loading ? (
+        {!ready && !user ? (
           <div className="em-center">
             <Loader />
           </div>
