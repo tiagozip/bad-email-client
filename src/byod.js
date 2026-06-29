@@ -301,3 +301,14 @@ export async function verifyRelay(relayUrl, secret, expectedDomain) {
     return { ok: false, error: `relay is bound to ${data.domain}, not ${expectedDomain}` };
   return { ok: true };
 }
+
+export async function checkRelayHealth(env, row) {
+  if (!row?.relay_url || !row?.relay_secret_enc) return { ok: false, error: "no relay configured" };
+  let secret;
+  try {
+    secret = await decryptRelaySecret(env, row.domain, row.relay_secret_enc);
+  } catch {
+    return { ok: false, error: "relay secret error" };
+  }
+  return verifyRelay(row.relay_url, secret, row.domain);
+}

@@ -11,6 +11,7 @@ import {
 } from "@cloudflare/kumo";
 import {
   Bell,
+  ArrowsClockwise,
   Camera,
   Check,
   CheckCircle,
@@ -21,6 +22,8 @@ import {
   Lock,
   LockKey,
   Palette,
+  Plugs,
+  PlugsConnected,
   Plus,
   ShieldCheck,
   Star,
@@ -886,6 +889,7 @@ function Domains() {
   const [directory, setDirectory] = useState([]);
   const [byodOpen, setByodOpen] = useState(false);
   const [byodExisting, setByodExisting] = useState(null);
+  const [checking, setChecking] = useState(null);
 
   function refresh() {
     api
@@ -931,6 +935,41 @@ function Domains() {
     }
   }
 
+  async function checkHealth(d) {
+    setChecking(d.id);
+    try {
+      const r = await api.relayHealth(d.id);
+      setDomains((p) =>
+        (p || []).map((x) =>
+          x.id === d.id ? { ...x, relayOk: !!r.ok, relayCheckedAt: r.checkedAt } : x,
+        ),
+      );
+      if (r.ok) notify("Relay online", `${d.domain} is reachable.`, "success");
+      else notify("Relay offline", r.error || `${d.domain} did not respond.`, "error");
+    } catch (err) {
+      notifyError(err);
+    } finally {
+      setChecking(null);
+    }
+  }
+
+  async function rotate(d) {
+    if (
+      !window.confirm(
+        `Rotate the secret for ${d.domain}? Your current Worker will stop working until you redeploy it with the new RELAY_CONFIG and verify again.`,
+      )
+    )
+      return;
+    try {
+      await api.rotateRelay(d.id);
+      notify("Secret rotated", "Redeploy your Worker with the new RELAY_CONFIG.", "success");
+      openSetup(d);
+      refresh();
+    } catch (err) {
+      notifyError(err);
+    }
+  }
+
   return (
     <>
       <div className="em-card">
@@ -969,9 +1008,30 @@ function Domains() {
                     </Badge>
                   )}
                   {d.builtIn && <Badge variant="purple">built-in</Badge>}
+                  {d.isByod && d.relayUrl && d.relayOk === true && (
+                    <Badge variant="green" icon={PlugsConnected}>
+                      relay online
+                    </Badge>
+                  )}
+                  {d.isByod && d.relayUrl && d.relayOk === false && (
+                    <Badge variant="red" icon={Plugs}>
+                      relay offline
+                    </Badge>
+                  )}
                 </div>
                 {!d.builtIn && (
                   <div className="em-alias-actions">
+                    {d.isByod && d.relayUrl && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        icon={PlugsConnected}
+                        loading={checking === d.id}
+                        onClick={() => checkHealth(d)}
+                      >
+                        Check
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="ghost"
@@ -980,6 +1040,16 @@ function Domains() {
                     >
                       {d.verified ? "Set up" : "Verify"}
                     </Button>
+                    {d.isByod && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        icon={ArrowsClockwise}
+                        onClick={() => rotate(d)}
+                      >
+                        Rotate
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="ghost"

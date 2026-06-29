@@ -10,6 +10,7 @@ import {
 } from "./auth.js";
 import {
   byodIngest,
+  checkRelayHealth,
   decryptRelaySecret,
   encryptSecret,
   generateRelaySecret,
@@ -1452,7 +1453,7 @@ export async function handleApi(request, env, ctx) {
 
   if (path === "/api/domains" && method === "GET") {
     const res = await env.DB.prepare(
-      "SELECT id, domain, verified, send_verified, public, public_pending, verify_token, created_at FROM domains WHERE owner_id = ? ORDER BY created_at DESC",
+      "SELECT id, domain, verified, send_verified, public, public_pending, verify_token, created_at, relay_url, relay_secret_enc, relay_ok, relay_checked_at FROM domains WHERE owner_id = ? ORDER BY created_at DESC",
     )
       .bind(user.id)
       .all();
@@ -1466,6 +1467,10 @@ export async function handleApi(request, env, ctx) {
       verifyToken: r.verify_token || "",
       createdAt: r.created_at,
       builtIn: false,
+      isByod: !!r.relay_secret_enc,
+      relayUrl: r.relay_url || "",
+      relayOk: r.relay_ok === null || r.relay_ok === undefined ? null : !!r.relay_ok,
+      relayCheckedAt: r.relay_checked_at || null,
     }));
     const builtIn = {
       id: "builtin",
@@ -1617,6 +1622,41 @@ export async function handleApi(request, env, ctx) {
       .first();
     if (!row) return error(404, "not found");
     return json({ verified: !!row.verified, sendVerified: !!row.send_verified });
+  }
+  if ((m = path.match(/^\/api\/domains\/([\w-]+)\/relay-health$/)) && method === "POST") {
+    const row = await env.DB.prepare(
+      "SELECT id, domain, relay_url, relay_secret_enc FROM domains WHERE id = ? AND owner_id = ?",
+    )
+      .bind(m[1], user.id)
+      .first();
+    if (!row?.relay_secret_enc) return error(404, "not a bring-your-own-domain");
+    if (!row.relay_url) return error(400, "relay not set up yet");
+    const health = await checkRelayHealth(env, row);
+    await env.DB.prepare("UPDATE domains SET relay_ok = ?, relay_checked_at = ? WHERE id = ?")
+      .bind(health.ok ? 1 : 0, now(), row.id)
+      .run();
+    return json({ ok: health.ok, error: health.error || null, checkedAt: now() });
+  }
+  if ((m = path.match(/^\/api\/domains\/([\w-]+)\/relay\/rotate$/)) && method === "POST") {
+    const row = await env.DB.prepare(
+      "SELECT id, domain, relay_secret_enc FROM domains WHERE id = ? AND owner_id = ?",
+    )
+      .bind(m[1], user.id)
+      .first();
+    if (!row?.relay_secret_enc) return error(404, "not a bring-your-own-domain");
+    const secret = generateRelaySecret();
+    const secretEnc = await encryptSecret(env, row.domain, secret);
+    await env.DB.prepare(
+      "UPDATE domains SET relay_secret_enc = ?, verified = 0, send_verified = 0, relay_ok = NULL, relay_checked_at = NULL WHERE id = ?",
+    )
+      .bind(secretEnc, row.id)
+      .run();
+    return json({
+      id: row.id,
+      domain: row.domain,
+      relayConfig: relayConfigToken(secret, row.domain, url.origin),
+      deployUrl: RELAY_DEPLOY_URL,
+    });
   }
   if ((m = path.match(/^\/api\/domains\/([\w-]+)\/verify$/)) && method === "POST") {
     const row = await env.DB.prepare(

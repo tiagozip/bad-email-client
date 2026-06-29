@@ -158,7 +158,9 @@ CREATE TABLE IF NOT EXISTS domains (
   created_at INTEGER NOT NULL,
   added_by TEXT,
   relay_url TEXT,
-  relay_secret_enc TEXT
+  relay_secret_enc TEXT,
+  relay_ok INTEGER,
+  relay_checked_at INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_domains_domain ON domains(domain);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_domains_verified_unique ON domains(domain) WHERE verified = 1;
