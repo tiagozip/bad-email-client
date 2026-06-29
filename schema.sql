@@ -156,9 +156,12 @@ CREATE TABLE IF NOT EXISTS domains (
   owner_id TEXT,
   verify_token TEXT,
   created_at INTEGER NOT NULL,
-  added_by TEXT
+  added_by TEXT,
+  relay_url TEXT,
+  relay_secret_enc TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_domains_domain ON domains(domain);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_domains_verified_unique ON domains(domain) WHERE verified = 1;
 
 CREATE TABLE IF NOT EXISTS push_subscriptions (
   id TEXT PRIMARY KEY,

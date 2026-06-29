@@ -8,6 +8,14 @@ import {
   sessionCookie,
   sha256Hex,
 } from "./auth.js";
+import {
+  byodIngest,
+  decryptRelaySecret,
+  encryptSecret,
+  generateRelaySecret,
+  RELAY_WORKER_TEMPLATE,
+  verifyRelay,
+} from "./byod.js";
 import { encryptBytes, tryDecryptBytes, tryDecryptText } from "./crypto.js";
 import { checkOwnership, checkSendingDns, lookupMx } from "./domains.js";
 import {
@@ -309,9 +317,7 @@ const DOMAIN_RE = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z
 
 async function verifiedDomainSet(env, userId) {
   const set = new Set([String(env.MAIL_DOMAIN || "").toLowerCase()]);
-  const res = await env.DB.prepare(
-    "SELECT domain FROM domains WHERE verified = 1 AND (public = 1 OR owner_id = ?)",
-  )
+  const res = await env.DB.prepare("SELECT domain FROM domains WHERE verified = 1 AND owner_id = ?")
     .bind(userId || "")
     .all();
   for (const r of res.results || []) set.add(String(r.domain).toLowerCase());
@@ -704,6 +710,7 @@ export async function handleApi(request, env, ctx) {
 
   if (path === "/api/auth/login" && method === "GET") return oidcLogin(request, env);
   if (path === "/api/auth/callback" && method === "GET") return oidcCallback(request, env);
+  if (path === "/api/byod/ingest" && method === "POST") return byodIngest(request, env, ctx);
 
   const auth = await authenticate(request, env);
   if (!auth?.viaApiKey && !requireOrigin(request, env)) return error(403, "bad origin");
@@ -1506,6 +1513,84 @@ export async function handleApi(request, env, ctx) {
       builtIn: false,
     });
   }
+  if (path === "/api/domains/byod" && method === "POST") {
+    const b = await readJson(request);
+    const domain = String(b.domain || "")
+      .trim()
+      .toLowerCase();
+    if (!DOMAIN_RE.test(domain)) return error(400, "invalid domain");
+    if (domain === String(env.MAIL_DOMAIN || "").toLowerCase())
+      return error(409, "that is the built-in domain");
+    const exists = await env.DB.prepare("SELECT id FROM domains WHERE domain = ? AND owner_id = ?")
+      .bind(domain, user.id)
+      .first();
+    if (exists) return error(409, "you already added this domain");
+    const id = uuid();
+    const verifyToken = randomToken(16);
+    const secret = generateRelaySecret();
+    const secretEnc = await encryptSecret(env, domain, secret);
+    await env.DB.prepare(
+      "INSERT INTO domains (id, domain, verified, owner_id, verify_token, created_at, added_by, relay_secret_enc) VALUES (?,?,0,?,?,?,?,?)",
+    )
+      .bind(id, domain, user.id, verifyToken, now(), user.id, secretEnc)
+      .run();
+    return json({
+      id,
+      domain,
+      verifyToken,
+      relaySecret: secret,
+      mailEndpoint: url.origin,
+      ingestUrl: `${url.origin}/api/byod/ingest`,
+      relayTemplate: RELAY_WORKER_TEMPLATE,
+    });
+  }
+  if ((m = path.match(/^\/api\/domains\/([\w-]+)\/relay$/)) && method === "POST") {
+    const b = await readJson(request);
+    const relayUrl = String(b.relayUrl || "").trim();
+    let ru;
+    try {
+      ru = new URL(relayUrl);
+    } catch {
+      return error(400, "invalid relay URL");
+    }
+    const rhost = ru.hostname.toLowerCase();
+    if (
+      ru.protocol !== "https:" ||
+      (ru.port && ru.port !== "443") ||
+      rhost === "localhost" ||
+      rhost.endsWith(".internal") ||
+      rhost.endsWith(".local") ||
+      rhost.endsWith(".localhost") ||
+      /^\d{1,3}(\.\d{1,3}){3}$/.test(rhost) ||
+      rhost.includes(":") ||
+      !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(rhost)
+    )
+      return error(400, "relay URL must be a public https URL on port 443");
+    const row = await env.DB.prepare(
+      "SELECT id, domain, verify_token, relay_secret_enc FROM domains WHERE id = ? AND owner_id = ?",
+    )
+      .bind(m[1], user.id)
+      .first();
+    if (!row?.relay_secret_enc) return error(404, "not a bring-your-own-domain");
+    const taken = await env.DB.prepare(
+      "SELECT 1 FROM domains WHERE domain = ? AND verified = 1 AND owner_id != ? LIMIT 1",
+    )
+      .bind(row.domain, user.id)
+      .first();
+    if (taken) return error(409, "this domain is already verified by another account");
+    const owns = await checkOwnership(row.domain, row.verify_token);
+    if (!owns)
+      return error(400, "ownership TXT record not found yet; add it and try again in a minute");
+    const secret = await decryptRelaySecret(env, row.domain, row.relay_secret_enc);
+    const v = await verifyRelay(relayUrl, secret, row.domain);
+    if (!v.ok) return error(400, v.error || "could not verify relay");
+    await env.DB.prepare(
+      "UPDATE domains SET relay_url = ?, verified = 1, send_verified = 1 WHERE id = ?",
+    )
+      .bind(relayUrl, row.id)
+      .run();
+    return json({ ok: true, verified: true, sendVerified: true });
+  }
   if ((m = path.match(/^\/api\/domains\/([\w-]+)\/verify$/)) && method === "POST") {
     const row = await env.DB.prepare(
       "SELECT id, domain, verify_token FROM domains WHERE id = ? AND owner_id = ?",
@@ -1513,6 +1598,12 @@ export async function handleApi(request, env, ctx) {
       .bind(m[1], user.id)
       .first();
     if (!row) return error(404, "not found");
+    const claimed = await env.DB.prepare(
+      "SELECT 1 FROM domains WHERE domain = ? AND verified = 1 AND owner_id != ? LIMIT 1",
+    )
+      .bind(row.domain, user.id)
+      .first();
+    if (claimed) return error(409, "this domain is already verified by another account");
     let lookup;
     let sending;
     let owns;

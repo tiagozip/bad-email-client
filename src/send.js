@@ -1,4 +1,5 @@
 import * as openpgp from "openpgp";
+import { sendViaRelay } from "./byod.js";
 import { encryptText, tryDecryptBytes } from "./crypto.js";
 import { sanitizeEmailHtml, textToHtml } from "./sanitize.js";
 import { bumpContact, htmlKey, insertMessage, resolveThread, updateStorage } from "./store.js";
@@ -96,17 +97,21 @@ export async function sendMessage(env, user, payload) {
   }
 
   const fromDomain = fromAddr.split("@")[1]?.toLowerCase() || "";
+  let relayDomain = null;
   if (fromDomain && fromDomain !== String(env.MAIL_DOMAIN || "").toLowerCase()) {
-    const dom = await env.DB.prepare("SELECT send_verified FROM domains WHERE domain = ?")
-      .bind(fromDomain)
+    const ownDom = await env.DB.prepare(
+      "SELECT domain, send_verified, relay_url, relay_secret_enc FROM domains WHERE domain = ? AND owner_id = ?",
+    )
+      .bind(fromDomain, user.id)
       .first();
-    if (!dom?.send_verified) {
+    if (!ownDom?.send_verified) {
       const err = new Error(
-        "This domain is not verified for sending yet. Add its SPF and DKIM records in Cloudflare Email Sending, then verify it in Admin.",
+        "You can only send from a domain you own and have verified. Finish its setup in Settings > Domains.",
       );
       err.code = "domain_unverified";
       throw err;
     }
+    if (ownDom.relay_url) relayDomain = ownDom;
   }
 
   const subject = (payload.subject || "(no subject)").slice(0, 988);
@@ -170,7 +175,9 @@ export async function sendMessage(env, user, payload) {
   if (Object.keys(headers).length) sendPayload.headers = headers;
   if (attachments.length && !isE2E) sendPayload.attachments = attachments;
 
-  const result = await env.EMAIL.send(sendPayload);
+  const result = relayDomain
+    ? await sendViaRelay(env, relayDomain, sendPayload)
+    : await env.EMAIL.send(sendPayload);
 
   const messageId = uuid();
   const rfcId = `<${messageId}@${env.MAIL_DOMAIN}>`;

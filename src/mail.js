@@ -14,6 +14,7 @@ import {
   rawKey,
   resolveThread,
   updateStorage,
+  userStorageQuota,
 } from "./store.js";
 import { normalizeAddr, now, snippetFrom, uuid } from "./util.js";
 
@@ -125,20 +126,47 @@ export async function handleEmail(message, env, ctx) {
     message.setReject("550 5.1.1 This address is no longer active");
     return;
   }
-  const userId = resolved.userId;
-  const matchedAddress = resolved.address;
-  if (!userId) {
+  if (!resolved.userId) {
     message.setReject("550 5.1.1 No such mailbox at estrogen.delivery");
     return;
   }
+  try {
+    await storeInbound(env, ctx, {
+      raw,
+      userId: resolved.userId,
+      matchedAddress: resolved.address || null,
+      envelopeFrom: message.from,
+    });
+  } catch (e) {
+    if (e?.permanent) {
+      message.setReject(`550 5.2.0 ${e.message}`);
+      return;
+    }
+    throw e;
+  }
+}
 
-  const parsed = await PostalMime.parse(raw);
+export async function storeInbound(env, ctx, { raw, userId, matchedAddress, envelopeFrom }) {
+  let parsed;
+  try {
+    parsed = await PostalMime.parse(raw);
+  } catch (e) {
+    const err = new Error("could not parse message");
+    err.permanent = true;
+    throw err;
+  }
   const messageId = uuid();
   const user = await env.DB.prepare(
     "SELECT storage_used, pgp_enabled, pgp_public_key, settings_json FROM users WHERE id = ?",
   )
     .bind(userId)
     .first();
+  const quota = await userStorageQuota(env);
+  if ((user?.storage_used || 0) + raw.byteLength > quota) {
+    const err = new Error("mailbox is full");
+    err.permanent = true;
+    throw err;
+  }
   let used = user?.storage_used || 0;
   let aiSpamEnabled = true;
   try {
@@ -146,6 +174,8 @@ export async function handleEmail(message, env, ctx) {
   } catch {}
 
   const rawText = new TextDecoder().decode(raw);
+  const headerSep = rawText.search(/\r?\n\r?\n/);
+  const headerBlock = headerSep === -1 ? rawText : rawText.slice(0, headerSep);
   const alreadyPgp =
     rawText.includes("-----BEGIN PGP MESSAGE-----") ||
     (parsed.attachments || []).some((a) =>
@@ -241,16 +271,15 @@ export async function handleEmail(message, env, ctx) {
     hasHtml = 1;
   }
 
-  const inReplyTo = (message.headers.get("in-reply-to") || parsed.inReplyTo || "").trim() || null;
-  const refs = refsToList(message.headers.get("references") || parsed.references);
+  const inReplyTo =
+    (firstHeader(headerBlock, "in-reply-to") || parsed.inReplyTo || "").trim() || null;
+  const refs = refsToList(firstHeader(headerBlock, "references") || parsed.references);
   const threadId = (await resolveThread(env, userId, inReplyTo, refs)) || messageId;
 
-  const fromAddr = normalizeAddr(parsed.from?.address || message.from);
+  const fromAddr = normalizeAddr(parsed.from?.address || envelopeFrom);
   const fromName = parsed.from?.name || "";
   const date = parsed.date ? new Date(parsed.date).getTime() || now() : now();
 
-  const headerSep = rawText.search(/\r?\n\r?\n/);
-  const headerBlock = headerSep === -1 ? rawText : rawText.slice(0, headerSep);
   const auth = evaluateAuth(headerBlock);
   const spoofed = auth.status === "fail";
   let folder = spoofed ? "spam" : "inbox";
@@ -326,7 +355,7 @@ export async function handleEmail(message, env, ctx) {
     id: messageId,
     user_id: userId,
     thread_id: threadId,
-    rfc_message_id: parsed.messageId || message.headers.get("message-id") || null,
+    rfc_message_id: parsed.messageId || firstHeader(headerBlock, "message-id") || null,
     in_reply_to: inReplyTo,
     refs: refs.join(" "),
     folder,
@@ -335,7 +364,7 @@ export async function handleEmail(message, env, ctx) {
       spf: auth.spf,
       dkim: auth.dkim,
       dmarc: auth.dmarc,
-      envelopeFrom: message.from,
+      envelopeFrom,
     }),
     from_addr: fromAddr,
     from_name: fromName,

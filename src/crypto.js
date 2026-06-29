@@ -56,3 +56,7 @@ export async function tryDecryptText(env, bytes) {
   const plain = await tryDecryptBytes(env, bytes);
   return new TextDecoder().decode(plain);
 }
+
+export async function decryptText(env, bytes) {
+  return new TextDecoder().decode(await decryptBytes(env, bytes));
+}
