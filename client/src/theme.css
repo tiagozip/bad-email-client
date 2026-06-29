@@ -4095,6 +4095,52 @@ html[data-mode="dark"] .em-letter .em-shiki {
   padding: var(--em-2);
 }
 
+.em-byod-deploy {
+  display: inline-flex;
+  width: fit-content;
+}
+
+.em-inline-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78em;
+  background: var(--color-kumo-recessed);
+  border-radius: var(--em-radius-sm);
+  padding: 1px 5px;
+}
+
+.em-byod-disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-color-kumo-subtle);
+  width: fit-content;
+}
+
+.em-byod-disclosure:hover {
+  color: var(--text-color-kumo-default);
+}
+
+.em-byod-disclosure svg {
+  transition: transform 0.15s ease;
+}
+
+.em-byod-disclosure.open svg {
+  transform: rotate(180deg);
+}
+
+.em-byod-shiki {
+  max-height: 320px;
+  overflow: auto;
+  font-size: 0.72rem;
+  border: 1px solid var(--color-kumo-hairline);
+  border-radius: var(--em-radius-sm);
+}
+
 .em-byod-actions {
   display: flex;
   gap: var(--em-2);

@@ -46,6 +46,18 @@ export function generateRelaySecret() {
   return randHex(32);
 }
 
+export const RELAY_DEPLOY_URL =
+  "https://deploy.workers.cloudflare.com/?url=https://github.com/tiagozip/mail/tree/main/relay";
+
+export function relayConfigToken(secret, domain, mailEndpoint) {
+  const json = JSON.stringify({
+    s: secret,
+    d: String(domain).toLowerCase(),
+    m: String(mailEndpoint).replace(/\/$/, ""),
+  });
+  return bufToB64(enc.encode(json));
+}
+
 function bufToB64(bytes) {
   let bin = "";
   const u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
@@ -235,9 +247,13 @@ export async function verifyRelay(relayUrl, secret, expectedDomain) {
   return { ok: true };
 }
 
-export const RELAY_WORKER_TEMPLATE = `// estrogen.delivery BYOD relay — deploy on YOUR Cloudflare account.
-// Vars/secrets: RELAY_SECRET (from the mail app), MAIL_ENDPOINT (https://mail.estrogen.delivery), DOMAIN (your domain).
-// Enable Email Sending for DOMAIN on this account; point Email Routing catch-all at this Worker.
+export function relayWorkerCode(secret, domain, mailEndpoint) {
+  return `// estrogen.delivery BYOD relay — paste into a new Worker on YOUR Cloudflare account.
+// No env vars to set. Just add a send_email binding named EMAIL, then point your
+// domain's Email Routing catch-all at this Worker and enable Email Sending for it.
+const RELAY_SECRET = ${JSON.stringify(secret)};
+const DOMAIN = ${JSON.stringify(String(domain).toLowerCase())};
+const MAIL_ENDPOINT = ${JSON.stringify(String(mailEndpoint).replace(/\/$/, ""))};
 const enc = new TextEncoder();
 const toHex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
 async function hmacHex(secret, msg) {
@@ -254,15 +270,15 @@ const ALLOWED_HEADERS = new Set(["in-reply-to", "references"]);
 export default {
   async email(message, env, ctx) {
     const raw = new Uint8Array(await new Response(message.raw).arrayBuffer());
-    const domain = env.DOMAIN.toLowerCase();
+    const domain = DOMAIN;
     const rcpt = String(message.to || "").trim().toLowerCase();
     const mailfrom = String(message.from || "").trim().toLowerCase();
     const ts = Date.now().toString();
     const nonce = randHex(16);
-    const sig = await hmacHex(env.RELAY_SECRET, "ingest\\n" + ts + "\\n" + nonce + "\\n" + domain + "\\n" + rcpt + "\\n" + mailfrom + "\\n" + (await sha256hex(raw)));
+    const sig = await hmacHex(RELAY_SECRET, "ingest\\n" + ts + "\\n" + nonce + "\\n" + domain + "\\n" + rcpt + "\\n" + mailfrom + "\\n" + (await sha256hex(raw)));
     let ok = false;
     try {
-      const res = await fetch(env.MAIL_ENDPOINT.replace(/\\/$/, "") + "/api/byod/ingest", {
+      const res = await fetch(MAIL_ENDPOINT.replace(/\\/$/, "") + "/api/byod/ingest", {
         method: "POST",
         signal: AbortSignal.timeout(15000),
         headers: {
@@ -291,17 +307,17 @@ export default {
     if (!/^[a-f0-9]{16,64}$/.test(nonce)) return json(401, { error: "bad nonce" });
 
     if (url.pathname === "/health" && request.method === "POST") {
-      if (!tseq(sig, await hmacHex(env.RELAY_SECRET, "health\\n" + ts + "\\n" + nonce))) return json(401, { error: "bad sig" });
-      return json(200, { ok: true, domain: env.DOMAIN.toLowerCase() });
+      if (!tseq(sig, await hmacHex(RELAY_SECRET, "health\\n" + ts + "\\n" + nonce))) return json(401, { error: "bad sig" });
+      return json(200, { ok: true, domain: DOMAIN });
     }
 
     if (url.pathname === "/send" && request.method === "POST") {
       const body = await request.text();
-      if (!tseq(sig, await hmacHex(env.RELAY_SECRET, "send\\n" + ts + "\\n" + nonce + "\\n" + (await sha256hex(enc.encode(body)))))) return json(401, { error: "bad sig" });
+      if (!tseq(sig, await hmacHex(RELAY_SECRET, "send\\n" + ts + "\\n" + nonce + "\\n" + (await sha256hex(enc.encode(body)))))) return json(401, { error: "bad sig" });
       let p;
       try { p = JSON.parse(body); } catch { return json(400, { error: "bad json" }); }
       const from = String(p?.from?.email || "").toLowerCase();
-      if (!from.endsWith("@" + env.DOMAIN.toLowerCase())) return json(403, { error: "from domain not allowed" });
+      if (!from.endsWith("@" + DOMAIN)) return json(403, { error: "from domain not allowed" });
       const count = [].concat(p.to || [], p.cc || [], p.bcc || []).length;
       if (count > 50) return json(400, { error: "too many recipients" });
       if (p.headers && typeof p.headers === "object") {
@@ -321,3 +337,4 @@ export default {
   },
 };
 `;
+}

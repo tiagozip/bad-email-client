@@ -1,9 +1,11 @@
 import { Button, Input } from "@cloudflare/kumo";
-import { Check, Copy, X } from "@phosphor-icons/react";
-import { useState } from "react";
+import { CaretDown, Check, Copy, X } from "@phosphor-icons/react";
+import { lazy, Suspense, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "../api.js";
-import { notify, notifyError } from "../toast.js";
+import { notify } from "../toast.js";
+
+const ByodCode = lazy(() => import("./ByodCode.jsx"));
 
 function CopyField({ label, value, mono }) {
   const [copied, setCopied] = useState(false);
@@ -37,6 +39,7 @@ export function ByodSetup({ open, onClose, onDone }) {
   const [relayUrl, setRelayUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [showManual, setShowManual] = useState(false);
 
   function reset() {
     setStep(1);
@@ -44,6 +47,7 @@ export function ByodSetup({ open, onClose, onDone }) {
     setCreated(null);
     setRelayUrl("");
     setError("");
+    setShowManual(false);
   }
 
   function close() {
@@ -129,8 +133,8 @@ export function ByodSetup({ open, onClose, onDone }) {
         {step === 2 && created && (
           <div className="em-setup-body">
             <p className="em-card-sub">
-              On <strong>your</strong> Cloudflare account: add <strong>{created.domain}</strong>,
-              enable Email Sending and Email Routing for it, then deploy the relay Worker below.
+              On <strong>your</strong> Cloudflare account: prove ownership, deploy the relay with one
+              click, then turn on Email Routing and Email Sending for <strong>{created.domain}</strong>.
             </p>
 
             <div className="em-byod-block">
@@ -139,33 +143,42 @@ export function ByodSetup({ open, onClose, onDone }) {
             </div>
 
             <div className="em-byod-block">
-              <div className="em-byod-block-title">2. Deploy this Worker on your account</div>
+              <div className="em-byod-block-title">2. Deploy the relay Worker</div>
               <p className="em-byod-hint">
-                Create a Worker, paste this code, and set the three variables below (keep the secret
-                private — it's shown only once).
+                One click clones the Worker into your account. When it asks for{" "}
+                <code className="em-inline-code">RELAY_CONFIG</code>, paste the single value below.
+                That's the only thing to set.
               </p>
-              <textarea className="em-byod-template" readOnly value={created.relayTemplate} rows={8} />
-              <Button
-                size="sm"
-                variant="outline"
-                icon={Copy}
-                onClick={() => {
-                  navigator.clipboard?.writeText(created.relayTemplate);
-                  notify("Copied", "Relay Worker code copied.", "success");
-                }}
+              <a className="em-byod-deploy" href={created.deployUrl} target="_blank" rel="noreferrer">
+                <img
+                  src="https://deploy.workers.cloudflare.com/button"
+                  alt="Deploy to Cloudflare"
+                  height={32}
+                />
+              </a>
+              <CopyField label="RELAY_CONFIG" value={created.relayConfig} mono />
+
+              <button
+                type="button"
+                className={`em-byod-disclosure ${showManual ? "open" : ""}`}
+                onClick={() => setShowManual((v) => !v)}
               >
-                Copy Worker code
-              </Button>
-              <CopyField label="RELAY_SECRET (secret)" value={created.relaySecret} mono />
-              <CopyField label="MAIL_ENDPOINT" value={created.mailEndpoint} mono />
-              <CopyField label="DOMAIN" value={created.domain} mono />
+                <CaretDown weight="bold" />
+                Prefer to do it by hand? Show the Worker code
+              </button>
+              {showManual && (
+                <Suspense fallback={<div className="em-byod-hint">Loading code…</div>}>
+                  <ByodCode code={created.relayCode} />
+                </Suspense>
+              )}
             </div>
 
             <div className="em-byod-block">
               <div className="em-byod-block-title">3. Wire it up</div>
               <p className="em-byod-hint">
-                Point your domain's Email Routing catch-all at the Worker, and enable Email Sending
-                for the domain (so it can send with DKIM). Then continue.
+                In the Cloudflare dashboard for {created.domain}: set the Email Routing catch-all to
+                send to your new Worker, and enable Email Sending for the domain (so it can send with
+                DKIM). Then continue.
               </p>
             </div>
 
@@ -185,7 +198,7 @@ export function ByodSetup({ open, onClose, onDone }) {
             <Input
               autoFocus
               label="Relay Worker URL"
-              placeholder="https://your-relay.workers.dev"
+              placeholder="https://estrogen-mail-relay.your-subdomain.workers.dev"
               value={relayUrl}
               onChange={(e) => {
                 setRelayUrl(e.target.value);

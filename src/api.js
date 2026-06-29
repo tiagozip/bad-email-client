@@ -13,7 +13,9 @@ import {
   decryptRelaySecret,
   encryptSecret,
   generateRelaySecret,
-  RELAY_WORKER_TEMPLATE,
+  RELAY_DEPLOY_URL,
+  relayConfigToken,
+  relayWorkerCode,
   verifyRelay,
 } from "./byod.js";
 import { encryptBytes, tryDecryptBytes, tryDecryptText } from "./crypto.js";
@@ -1538,10 +1540,9 @@ export async function handleApi(request, env, ctx) {
       id,
       domain,
       verifyToken,
-      relaySecret: secret,
-      mailEndpoint: url.origin,
-      ingestUrl: `${url.origin}/api/byod/ingest`,
-      relayTemplate: RELAY_WORKER_TEMPLATE,
+      relayConfig: relayConfigToken(secret, domain, url.origin),
+      deployUrl: RELAY_DEPLOY_URL,
+      relayCode: relayWorkerCode(secret, domain, url.origin),
     });
   }
   if ((m = path.match(/^\/api\/domains\/([\w-]+)\/relay$/)) && method === "POST") {
