@@ -9,6 +9,7 @@
   "routes": [{ "pattern": "mail.estrogen.delivery", "custom_domain": true }],
   "triggers": { "crons": ["* * * * *", "17 7 * * *"] },
   "observability": { "enabled": true },
+  "dev": { "port": 8794 },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
