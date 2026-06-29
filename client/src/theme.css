@@ -3998,7 +3998,6 @@ a:focus-visible,
   }
 }
 
-[role="dialog"][aria-modal="false"] p:not(.font-medium) {
-  color: var(--text-color-kumo-default);
-  opacity: 0.86;
+[role="dialog"][aria-modal="false"] {
+  background-color: var(--color-kumo-recessed);
 }
