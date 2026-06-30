@@ -1,3 +1,5 @@
+import { checkRelayHealth } from "./byod.js";
+
 const CF_MX_RE = /(?:^|\.)mx\.cloudflare\.net\.?$/;
 const CF_SPF_INCLUDE = "_spf.mx.cloudflare.net";
 const DKIM_SELECTORS = ["cf2024-1", "cf2024-2", "cf2025-1", "cf2026-1"];
@@ -61,11 +63,41 @@ export async function lookupMx(domain) {
   return { records, routesToCloudflare };
 }
 
+async function notifyDowngrade(env, d) {
+  if (!d.owner_id) return;
+  const owner = await env.DB.prepare("SELECT address FROM users WHERE id = ?")
+    .bind(d.owner_id)
+    .first();
+  if (!owner?.address) return;
+  try {
+    await env.EMAIL.send({
+      to: owner.address,
+      from: { email: `noreply@${env.MAIL_DOMAIN}`, name: "estrogen.mail" },
+      subject: `Your domain ${d.domain} stopped verifying`,
+      text: `Heads up: ${d.domain} is no longer reachable for this mailbox. Receiving and sending on it are paused until you re-verify it in Settings, Domains.`,
+    });
+  } catch {}
+}
+
 export async function reverifyAllDomains(env) {
   const res = await env.DB.prepare(
-    "SELECT id, domain, verified, send_verified, public, owner_id FROM domains",
+    "SELECT id, domain, verified, send_verified, public, owner_id, relay_secret_enc, relay_url FROM domains",
   ).all();
   for (const d of res.results || []) {
+    if (d.relay_secret_enc) {
+      if (!d.relay_url) continue;
+      const health = await checkRelayHealth(env, d);
+      const verified = health.ok && d.verified ? 1 : 0;
+      const sendVerified = health.ok && d.send_verified ? 1 : 0;
+      const pub = verified ? d.public : 0;
+      await env.DB.prepare(
+        "UPDATE domains SET relay_ok = ?, relay_checked_at = ?, verified = ?, send_verified = ?, public = ? WHERE id = ?",
+      )
+        .bind(health.ok ? 1 : 0, Date.now(), verified, sendVerified, pub, d.id)
+        .run();
+      if (d.verified && !verified) await notifyDowngrade(env, d);
+      continue;
+    }
     let mx;
     let sending;
     try {
@@ -83,20 +115,6 @@ export async function reverifyAllDomains(env) {
     )
       .bind(verified, sendVerified, pub, d.id)
       .run();
-    if (d.verified && !verified && d.owner_id) {
-      const owner = await env.DB.prepare("SELECT address FROM users WHERE id = ?")
-        .bind(d.owner_id)
-        .first();
-      if (owner?.address) {
-        try {
-          await env.EMAIL.send({
-            to: owner.address,
-            from: { email: `noreply@${env.MAIL_DOMAIN}`, name: "estrogen.mail" },
-            subject: `Your domain ${d.domain} stopped verifying`,
-            text: `Heads up: ${d.domain} no longer resolves to this mail server. Its DNS may have changed, lapsed, or the domain expired. Receiving and sending on it are paused until you re-verify it in Settings, Domains.`,
-          });
-        } catch {}
-      }
-    }
+    if (d.verified && !verified) await notifyDowngrade(env, d);
   }
 }
