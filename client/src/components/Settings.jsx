@@ -33,6 +33,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { api } from "../api.js";
 import * as pgp from "../pgp.js";
 import { notify, notifyError } from "../toast.js";
@@ -890,6 +891,8 @@ function Domains() {
   const [byodOpen, setByodOpen] = useState(false);
   const [byodExisting, setByodExisting] = useState(null);
   const [checking, setChecking] = useState(null);
+  const [publishTarget, setPublishTarget] = useState(null);
+  const [publishing, setPublishing] = useState(false);
 
   function refresh() {
     api
@@ -924,6 +927,18 @@ function Domains() {
     } catch (err) {
       notifyError(err);
     }
+  }
+
+  function onPublicToggle(d, v) {
+    if (v) setPublishTarget(d);
+    else togglePublic(d, false);
+  }
+
+  async function confirmPublish() {
+    setPublishing(true);
+    await togglePublic(publishTarget, true);
+    setPublishing(false);
+    setPublishTarget(null);
   }
 
   async function remove(id) {
@@ -1065,7 +1080,7 @@ function Domains() {
                     <Switch
                       aria-label="List in public directory"
                       checked={!!d.public || !!d.publicPending}
-                      onCheckedChange={(v) => togglePublic(d, v)}
+                      onCheckedChange={(v) => onPublicToggle(d, v)}
                     />
                     <span>
                       {d.publicPending
@@ -1113,6 +1128,66 @@ function Domains() {
         onClose={() => setByodOpen(false)}
         onDone={refresh}
       />
+
+      {publishTarget &&
+        createPortal(
+          <div
+            className="em-modal-scrim"
+            onClick={(e) => {
+              if (e.target === e.currentTarget && !publishing) setPublishTarget(null);
+            }}
+          >
+            <div className="em-modal-panel em-setup-dialog">
+              <div className="em-label-head">
+                <h2 className="em-label-title">List {publishTarget.domain} publicly?</h2>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  shape="square"
+                  aria-label="Close"
+                  icon={X}
+                  disabled={publishing}
+                  onClick={() => setPublishTarget(null)}
+                />
+              </div>
+              <div className="em-setup-body">
+                <p className="em-card-sub">Here's exactly what listing a domain publicly does:</p>
+                <ul className="em-byod-steps">
+                  <li>
+                    Your request goes to an <strong>admin for review</strong>. Nothing is listed until
+                    they approve it.
+                  </li>
+                  <li>
+                    Once approved, <strong>anyone with an account here</strong> can create their own
+                    addresses on <strong>{publishTarget.domain}</strong> (like{" "}
+                    <code className="em-inline-code">them@{publishTarget.domain}</code>).
+                  </li>
+                  <li>
+                    Mail to those addresses goes to <strong>those people, not you</strong>. You never
+                    see it, and you can't read or manage their addresses.
+                  </li>
+                  <li>
+                    You stay the owner and keep your own addresses. You can <strong>unlist it
+                    anytime</strong>: that stops new addresses from being created, and any existing
+                    ones keep working.
+                  </li>
+                </ul>
+                <p className="em-byod-hint">
+                  Only do this for a domain you're happy to share with everyone on this server.
+                </p>
+                <div className="em-byod-actions">
+                  <Button variant="ghost" disabled={publishing} onClick={() => setPublishTarget(null)}>
+                    Cancel
+                  </Button>
+                  <Button variant="primary" loading={publishing} onClick={confirmPublish}>
+                    Request public listing
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }
